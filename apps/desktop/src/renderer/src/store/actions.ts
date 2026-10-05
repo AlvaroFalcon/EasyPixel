@@ -20,6 +20,8 @@ export type DialogState =
   | { kind: 'resize' }
   | { kind: 'import'; image: PixelRegion; fileName: string }
   | { kind: 'export' }
+  /** Create (no tagId) or edit an animation tag. */
+  | { kind: 'tag'; tagId?: string }
   | null;
 
 export const useDialog = create<{ dialog: DialogState }>(() => ({ dialog: null }));

@@ -62,6 +62,17 @@ export interface EditorState {
   shapeFilled: boolean;
 
   showGrid: boolean;
+  onionSkin: boolean;
+  /** Frames shown before/after the current one when onion skin is on. */
+  onionRange: number;
+
+  /** Animation preview is playing. */
+  playing: boolean;
+  /** Tag (animation) selected in the timeline and played by the preview; null = all frames. */
+  activeTagId: string | null;
+  /** Frames selected with shift+click in the timeline (inclusive). */
+  frameRange: { from: number; to: number } | null;
+
   zoom: number;
   /** Screen offset of the sprite's top-left corner; null = fit on next render. */
   pan: Point | null;
@@ -93,6 +104,11 @@ export const useEditor = create<EditorState>(() => ({
   fillContiguous: true,
   shapeFilled: false,
   showGrid: true,
+  onionSkin: false,
+  onionRange: 1,
+  playing: false,
+  activeTagId: null,
+  frameRange: null,
   zoom: 8,
   pan: null,
   cursor: null,
@@ -130,10 +146,14 @@ export function notify(text: string, kind: Notice['kind'] = 'info'): void {
 
 /** Keeps the active layer / frame valid after the document changed shape. */
 function normalized(doc: SpriteDocument, layerId: string, frameIndex: number) {
+  const s = get();
   const layerOk = doc.layers.some((l) => l.id === layerId);
+  const range = s.frameRange;
   return {
     layerId: layerOk ? layerId : doc.layers[doc.layers.length - 1].id,
     frameIndex: Math.max(0, Math.min(doc.frames.length - 1, frameIndex)),
+    activeTagId: doc.tags.some((t) => t.id === s.activeTagId) ? s.activeTagId : null,
+    frameRange: range && range.to < doc.frames.length ? range : null,
   };
 }
 
@@ -214,6 +234,9 @@ export function loadDocument(doc: SpriteDocument, filePath: string | null): void
     filePath,
     layerId: doc.layers[doc.layers.length - 1].id,
     frameIndex: 0,
+    activeTagId: null,
+    frameRange: null,
+    playing: false,
     selection: null,
     floating: null,
     pan: null,
@@ -233,10 +256,22 @@ export function selectLayer(layerId: string): void {
   set({ layerId });
 }
 
-export function selectFrame(frameIndex: number): void {
+export function selectFrame(frameIndex: number, opts: { extendRange?: boolean } = {}): void {
   settleFloating();
-  const n = get().doc.frames.length;
-  set({ frameIndex: ((frameIndex % n) + n) % n });
+  const s = get();
+  const n = s.doc.frames.length;
+  const index = ((frameIndex % n) + n) % n;
+  if (opts.extendRange) {
+    // Extend from the end of the range opposite to the current frame (like shift+click in a list).
+    const anchor = s.frameRange ? (s.frameRange.from === s.frameIndex ? s.frameRange.to : s.frameRange.from) : s.frameIndex;
+    set({ frameIndex: index, frameRange: { from: Math.min(anchor, index), to: Math.max(anchor, index) } });
+  } else {
+    set({ frameIndex: index, frameRange: null });
+  }
+}
+
+export function togglePlaying(): void {
+  set({ playing: !get().playing });
 }
 
 export function setTool(tool: ToolId): void {

@@ -12,6 +12,7 @@ import {
   setTool,
   settleFloating,
   swapColors,
+  togglePlaying,
   undo,
   useEditor,
 } from './store/editor';
@@ -85,6 +86,10 @@ export function installShortcuts(): () => void {
           case 'x':
           case 'X':
             swapColors();
+            break;
+          case 'p':
+          case 'P':
+            togglePlaying();
             break;
           case '[':
             useEditor.setState((s) => ({ brushSize: Math.max(1, s.brushSize - 1) }));

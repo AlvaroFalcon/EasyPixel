@@ -1,5 +1,5 @@
-import { compositeFrame, type SpriteDocument } from '@easypixel/core';
 import { useEffect, useRef } from 'react';
+import { frameCanvas, tintedFrameCanvas } from '../lib/frameCache';
 import { useEditor, type EditorState } from '../store/editor';
 import { pointerDown, pointerMove, pointerUp } from '../store/tools';
 import { fitToView, stepZoom, viewport } from '../store/view';
@@ -9,27 +9,6 @@ let spaceHeld = false;
 
 function isTyping(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
-}
-
-/** Caches the flattened current frame so redraws that only move the view are cheap. */
-function useFrameCache() {
-  const cache = useRef<{ doc: SpriteDocument | null; frame: number; canvas: HTMLCanvasElement }>({
-    doc: null,
-    frame: -1,
-    canvas: document.createElement('canvas'),
-  });
-  return (doc: SpriteDocument, frame: number): HTMLCanvasElement => {
-    const c = cache.current;
-    if (c.doc !== doc || c.frame !== frame) {
-      c.doc = doc;
-      c.frame = frame;
-      c.canvas.width = doc.width;
-      c.canvas.height = doc.height;
-      const data = compositeFrame(doc, frame);
-      c.canvas.getContext('2d')!.putImageData(new ImageData(data, doc.width, doc.height), 0, 0);
-    }
-    return c.canvas;
-  };
 }
 
 function checkerPattern(ctx: CanvasRenderingContext2D): CanvasPattern {
@@ -44,7 +23,29 @@ function checkerPattern(ctx: CanvasRenderingContext2D): CanvasPattern {
   return ctx.createPattern(tile, 'repeat')!;
 }
 
-function draw(canvas: HTMLCanvasElement, s: EditorState, frameCanvas: HTMLCanvasElement, checker: CanvasPattern): void {
+const ONION_PREV = 'rgba(255, 70, 110, 0.55)';
+const ONION_NEXT = 'rgba(60, 170, 255, 0.55)';
+
+/** Draws neighbouring frames, faded and tinted (red = previous, blue = next), under the current one. */
+function drawOnionSkin(ctx: CanvasRenderingContext2D, s: EditorState, w: number, h: number): void {
+  const { doc, frameIndex, onionRange, pan } = s;
+  const n = doc.frames.length;
+  if (!pan || n < 2) return;
+  for (let d = onionRange; d >= 1; d--) {
+    const alpha = 0.32 / d;
+    for (const [index, tint] of [
+      [frameIndex - d, ONION_PREV],
+      [frameIndex + d, ONION_NEXT],
+    ] as const) {
+      if (index < 0 || index >= n) continue;
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(tintedFrameCanvas(doc, index, tint), pan.x, pan.y, w, h);
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function draw(canvas: HTMLCanvasElement, s: EditorState, checker: CanvasPattern): void {
   const ctx = canvas.getContext('2d')!;
   const dpr = window.devicePixelRatio || 1;
   const { doc, zoom, pan } = s;
@@ -62,7 +63,8 @@ function draw(canvas: HTMLCanvasElement, s: EditorState, frameCanvas: HTMLCanvas
   ctx.restore();
 
   ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(frameCanvas, pan.x, pan.y, w, h);
+  if (s.onionSkin) drawOnionSkin(ctx, s, w, h);
+  ctx.drawImage(frameCanvas(doc, s.frameIndex), pan.x, pan.y, w, h);
 
   const px = 1 / dpr;
   // Pixel grid
@@ -139,7 +141,6 @@ function draw(canvas: HTMLCanvasElement, s: EditorState, frameCanvas: HTMLCanvas
 export function CanvasView() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const frameCache = useFrameCache();
   const tool = useEditor((s) => s.tool);
 
   // Rendering: redraw on any store change, at most once per animation frame.
@@ -155,7 +156,7 @@ export function CanvasView() {
         fitToView();
         return;
       }
-      draw(canvas, s, frameCache(s.doc, s.frameIndex), checker);
+      draw(canvas, s, checker);
     };
     const schedule = () => {
       if (!raf) raf = requestAnimationFrame(render);

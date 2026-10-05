@@ -5,6 +5,7 @@ import { FramesPanel } from './components/FramesPanel';
 import { LayersPanel } from './components/LayersPanel';
 import { MenuBar } from './components/MenuBar';
 import { PalettePanel } from './components/PalettePanel';
+import { PreviewPanel } from './components/PreviewPanel';
 import { StatusBar } from './components/StatusBar';
 import { Toolbar, ToolOptions } from './components/Toolbar';
 import { fileNameOf, setWindowState } from './lib/platform';
@@ -28,6 +29,7 @@ export function App() {
           <CanvasView />
         </main>
         <aside className="sidebar">
+          <PreviewPanel />
           <PalettePanel />
           <LayersPanel />
         </aside>

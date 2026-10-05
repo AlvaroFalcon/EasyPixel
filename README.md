@@ -12,7 +12,7 @@ directamente a **Godot 4**.
 |---|---|
 | 1. Base: modelo de documento, operaciones, historial, tests | ✅ |
 | 2. Editor: lienzo, herramientas, paleta, capas, frames, guardar/abrir | ✅ |
-| 3. Animación: tags, onion skin, previsualización | ⏳ |
+| 3. Animación: tags, onion skin, previsualización | ✅ |
 | 4. Servidor MCP para Claude | ⏳ |
 | 5. Exportación Godot (`SpriteFrames.tres`) | ⏳ |
 
@@ -68,10 +68,21 @@ ediciones que haga Claude (el historial guarda el origen de cada cambio).
 | `H` | Mano | `Supr` | Borrar selección |
 | `Ctrl+S` | Guardar | `Intro` / `Esc` | Fijar / cancelar selección flotante |
 | `Ctrl+O` | Abrir | `Ctrl+G` | Rejilla |
+| `P` | Reproducir / pausar animación | `Mayús`+clic en frame | Seleccionar rango de frames |
 | `Ctrl+I` | Importar PNG | `Ctrl+E` | Exportar PNG |
 
 Clic izquierdo dibuja con el color principal y clic derecho con el secundario.
 Por defecto el secundario es transparente, así que el clic derecho borra.
+
+## Animaciones
+
+- Selecciona un rango de frames con **Mayús+clic** en el timeline y pulsa **+ Nueva animación**
+  (`idle`, `walk`, `run`…). Cada animación tiene dirección (adelante, atrás, ping-pong) y bucle.
+- Las animaciones aparecen como barras de color sobre los frames: clic para seleccionarla
+  (la vista previa la reproduce), doble clic para editarla.
+- La duración se define por frame (ms), igual que en Aseprite; al exportar a Godot se convertirá
+  a velocidad + duración relativa de `SpriteFrames`.
+- **Papel cebolla**: muestra los frames vecinos (rojo = anterior, azul = siguiente).
 
 ## Formato `.epx.json`
 

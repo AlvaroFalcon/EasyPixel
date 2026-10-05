@@ -1,4 +1,5 @@
 import {
+  addTag,
   createDocument,
   DEFAULT_PALETTE,
   documentFromFrames,
@@ -6,10 +7,13 @@ import {
   layoutSpritesheet,
   MAX_CANVAS_SIZE,
   PALETTE_PRESETS,
+  removeTag,
   resizeCanvas,
+  updateTag,
   sliceSpritesheet,
   type Anchor,
   type PixelRegion,
+  type TagDirection,
 } from '@easypixel/core';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { regionToCanvas } from '../lib/image';
@@ -17,12 +21,14 @@ import { closeDialog, exportImage, exportPng, newDocument, useDialog, type Expor
 import { commit, pasteFloating, useEditor } from '../store/editor';
 import { fmt, t } from '../strings';
 
-function Modal({ title, children, onSubmit, submitLabel = t.dialogs.ok, valid = true }: {
+function Modal({ title, children, onSubmit, submitLabel = t.dialogs.ok, valid = true, extra }: {
   title: string;
   children: ReactNode;
   onSubmit: () => void;
   submitLabel?: string;
   valid?: boolean;
+  /** Rendered at the left of the footer (e.g. a delete button). */
+  extra?: ReactNode;
 }) {
   return (
     <div className="modal-backdrop" onPointerDown={(e) => e.target === e.currentTarget && closeDialog()}>
@@ -39,6 +45,7 @@ function Modal({ title, children, onSubmit, submitLabel = t.dialogs.ok, valid = 
         <h2>{title}</h2>
         <div className="modal-body">{children}</div>
         <footer>
+          {extra && <div className="footer-extra">{extra}</div>}
           <button type="button" onClick={closeDialog}>
             {t.dialogs.cancel}
           </button>
@@ -344,6 +351,94 @@ function ExportDialog() {
   );
 }
 
+const DIRECTIONS: TagDirection[] = ['forward', 'reverse', 'pingpong'];
+
+function TagDialog({ tagId }: { tagId?: string }) {
+  const doc = useEditor((s) => s.history.present.doc);
+  const frameIndex = useEditor((s) => s.frameIndex);
+  const frameRange = useEditor((s) => s.frameRange);
+  const existing = doc.tags.find((tag) => tag.id === tagId);
+  const [name, setName] = useState(existing?.name ?? (doc.tags.length === 0 ? 'idle' : ''));
+  // The dialog shows 1-based frame numbers, like the timeline.
+  const [from, setFrom] = useState((existing?.from ?? frameRange?.from ?? frameIndex) + 1);
+  const [to, setTo] = useState((existing?.to ?? frameRange?.to ?? frameIndex) + 1);
+  const [direction, setDirection] = useState<TagDirection>(existing?.direction ?? 'forward');
+  const [loop, setLoop] = useState(existing?.loop ?? true);
+
+  const trimmed = name.trim();
+  const duplicate = doc.tags.some((tag) => tag.name === trimmed && tag.id !== tagId);
+  const n = doc.frames.length;
+  const valid = trimmed !== '' && !duplicate && from >= 1 && to >= from && to <= n;
+
+  return (
+    <Modal
+      title={existing ? t.animation.editTag : t.animation.newTag}
+      submitLabel={existing ? t.dialogs.ok : t.dialogs.create}
+      valid={valid}
+      extra={
+        existing && (
+          <button
+            type="button"
+            className="danger"
+            onClick={() => {
+              if (!window.confirm(fmt(t.animation.removeConfirm, { name: existing.name }))) return;
+              commit((d) => removeTag(d, existing.id), t.animation.remove);
+              closeDialog();
+            }}
+          >
+            {t.animation.remove}
+          </button>
+        )
+      }
+      onSubmit={() => {
+        const fields = { name: trimmed, from: from - 1, to: to - 1, direction, loop };
+        if (existing) {
+          commit((d) => updateTag(d, existing.id, fields), t.animation.editTag);
+        } else {
+          let created = '';
+          commit((d) => {
+            const r = addTag(d, fields);
+            created = r.tag.id;
+            return r.doc;
+          }, t.animation.newTag);
+          if (created) useEditor.setState({ activeTagId: created, frameRange: null });
+        }
+        closeDialog();
+      }}
+    >
+      <label className="field">
+        {t.dialogs.name}
+        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} data-testid="tag-name" placeholder="walk" />
+        <small className={duplicate ? 'error-text' : 'muted'}>{duplicate ? t.animation.nameExists : t.animation.nameHint}</small>
+      </label>
+      <div className="field-row">
+        <label>
+          {t.animation.from}
+          <input type="number" min={1} max={n} value={from} onChange={(e) => setFrom(Number(e.target.value))} />
+        </label>
+        <label>
+          {t.animation.to}
+          <input type="number" min={1} max={n} value={to} onChange={(e) => setTo(Number(e.target.value))} />
+        </label>
+      </div>
+      <div className="field">
+        {t.animation.direction}
+        <div className="chips">
+          {DIRECTIONS.map((d) => (
+            <button type="button" key={d} className={`chip ${direction === d ? 'active' : ''}`} onClick={() => setDirection(d)}>
+              {t.animation[d]}
+            </button>
+          ))}
+        </div>
+      </div>
+      <label className="option">
+        <input type="checkbox" checked={loop} onChange={(e) => setLoop(e.target.checked)} />
+        {t.animation.loop}
+      </label>
+    </Modal>
+  );
+}
+
 export function Dialogs() {
   const dialog = useDialog((s) => s.dialog);
   if (!dialog) return null;
@@ -356,5 +451,7 @@ export function Dialogs() {
       return <ImportDialog image={dialog.image} fileName={dialog.fileName} />;
     case 'export':
       return <ExportDialog />;
+    case 'tag':
+      return <TagDialog tagId={dialog.tagId} />;
   }
 }
