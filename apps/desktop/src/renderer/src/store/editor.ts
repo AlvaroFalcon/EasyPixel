@@ -1,0 +1,380 @@
+import {
+  canRedo,
+  canUndo,
+  clampRect,
+  clearCel,
+  copyRegion,
+  createDocument,
+  createHistory,
+  parseHex,
+  pasteRegion,
+  pushHistory,
+  redo as historyRedo,
+  undo as historyUndo,
+  type Color,
+  type EditSource,
+  type History,
+  type PixelRegion,
+  type Point,
+  type Rect,
+  type SpriteDocument,
+} from '@easypixel/core';
+import { create } from 'zustand';
+import { t } from '../strings';
+
+export type ToolId = 'pencil' | 'eraser' | 'bucket' | 'line' | 'rect' | 'ellipse' | 'eyedropper' | 'select' | 'pan';
+
+/** Pixels lifted from a cel (moved selection or paste) that float until committed. */
+export interface Floating {
+  region: PixelRegion;
+  x: number;
+  y: number;
+  /** Document with the source area already cleared; the region is stamped on top of it. */
+  base: SpriteDocument;
+  label: string;
+}
+
+export interface Notice {
+  id: number;
+  text: string;
+  kind: 'info' | 'error';
+}
+
+export interface EditorState {
+  history: History;
+  /** Displayed document: history.present.doc plus any in-progress (uncommitted) edit. */
+  doc: SpriteDocument;
+  /** Document as it was last saved/opened, to detect unsaved changes. */
+  savedDoc: SpriteDocument | null;
+  filePath: string | null;
+
+  layerId: string;
+  frameIndex: number;
+
+  tool: ToolId;
+  primary: Color;
+  secondary: Color;
+  brushSize: number;
+  pixelPerfect: boolean;
+  mirrorX: boolean;
+  mirrorY: boolean;
+  fillContiguous: boolean;
+  shapeFilled: boolean;
+
+  showGrid: boolean;
+  zoom: number;
+  /** Screen offset of the sprite's top-left corner; null = fit on next render. */
+  pan: Point | null;
+  cursor: Point | null;
+
+  selection: Rect | null;
+  floating: Floating | null;
+  clipboard: PixelRegion | null;
+
+  notice: Notice | null;
+}
+
+const initialDoc = createDocument({ name: 'sprite', width: 32, height: 32 });
+
+export const useEditor = create<EditorState>(() => ({
+  history: createHistory(initialDoc),
+  doc: initialDoc,
+  savedDoc: initialDoc,
+  filePath: null,
+  layerId: initialDoc.layers[0].id,
+  frameIndex: 0,
+  tool: 'pencil',
+  primary: parseHex('#000000'),
+  secondary: parseHex('#00000000'),
+  brushSize: 1,
+  pixelPerfect: true,
+  mirrorX: false,
+  mirrorY: false,
+  fillContiguous: true,
+  shapeFilled: false,
+  showGrid: true,
+  zoom: 8,
+  pan: null,
+  cursor: null,
+  selection: null,
+  floating: null,
+  clipboard: null,
+  notice: null,
+}));
+
+const get = useEditor.getState;
+const set = useEditor.setState;
+
+// ---------------------------------------------------------------------------
+// Selectors
+// ---------------------------------------------------------------------------
+
+export const isDirty = (s: EditorState) => s.history.present.doc !== s.savedDoc;
+export const currentFrame = (s: EditorState) => s.doc.frames[s.frameIndex];
+export const currentLayer = (s: EditorState) => s.doc.layers.find((l) => l.id === s.layerId)!;
+export const undoAvailable = (s: EditorState) => !!s.floating || canUndo(s.history);
+export const redoAvailable = (s: EditorState) => canRedo(s.history);
+
+// ---------------------------------------------------------------------------
+// Notices
+// ---------------------------------------------------------------------------
+
+let noticeId = 0;
+export function notify(text: string, kind: Notice['kind'] = 'info'): void {
+  set({ notice: { id: ++noticeId, text, kind } });
+}
+
+// ---------------------------------------------------------------------------
+// Committing edits
+// ---------------------------------------------------------------------------
+
+/** Keeps the active layer / frame valid after the document changed shape. */
+function normalized(doc: SpriteDocument, layerId: string, frameIndex: number) {
+  const layerOk = doc.layers.some((l) => l.id === layerId);
+  return {
+    layerId: layerOk ? layerId : doc.layers[doc.layers.length - 1].id,
+    frameIndex: Math.max(0, Math.min(doc.frames.length - 1, frameIndex)),
+  };
+}
+
+function setPresent(history: History, extra: Partial<EditorState> = {}): void {
+  const s = get();
+  const doc = history.present.doc;
+  set({
+    history,
+    doc,
+    ...normalized(doc, extra.layerId ?? s.layerId, extra.frameIndex ?? s.frameIndex),
+    ...withoutKeys(extra, ['layerId', 'frameIndex']),
+  });
+}
+
+function withoutKeys<T extends object>(obj: T, keys: (keyof T)[]): Partial<T> {
+  const out = { ...obj };
+  for (const k of keys) delete out[k];
+  return out;
+}
+
+/**
+ * Applies `fn` to the committed document and records it as one undo step.
+ * Errors (e.g. drawing on a locked layer) are shown as a notice. Returns
+ * whether the edit was applied.
+ */
+export function commit(
+  fn: (doc: SpriteDocument) => SpriteDocument,
+  label: string,
+  opts: { source?: EditSource; select?: Partial<Pick<EditorState, 'layerId' | 'frameIndex'>> } = {},
+): boolean {
+  settleFloating();
+  const s = get();
+  try {
+    const next = fn(s.history.present.doc);
+    setPresent(pushHistory(s.history, next, label, opts.source), opts.select);
+    return true;
+  } catch (e) {
+    notify((e as Error).message, 'error');
+    set({ doc: s.history.present.doc });
+    return false;
+  }
+}
+
+/** Shows an uncommitted document (live stroke / shape preview). */
+export function preview(doc: SpriteDocument): void {
+  set({ doc });
+}
+
+/** Records the previewed document as one undo step. */
+export function commitPreview(label: string, source: EditSource = 'user'): void {
+  const s = get();
+  setPresent(pushHistory(s.history, s.doc, label, source));
+}
+
+export function cancelPreview(): void {
+  set({ doc: get().history.present.doc });
+}
+
+export function undo(): void {
+  if (get().floating) {
+    cancelFloating();
+    return;
+  }
+  setPresent(historyUndo(get().history), { selection: null });
+}
+
+export function redo(): void {
+  settleFloating();
+  setPresent(historyRedo(get().history), { selection: null });
+}
+
+/** Replaces the whole session with another document (new / open / import). */
+export function loadDocument(doc: SpriteDocument, filePath: string | null): void {
+  set({
+    history: createHistory(doc),
+    doc,
+    savedDoc: filePath ? doc : null,
+    filePath,
+    layerId: doc.layers[doc.layers.length - 1].id,
+    frameIndex: 0,
+    selection: null,
+    floating: null,
+    pan: null,
+  });
+}
+
+export function markSaved(filePath: string): void {
+  set({ savedDoc: get().history.present.doc, filePath });
+}
+
+// ---------------------------------------------------------------------------
+// Navigation
+// ---------------------------------------------------------------------------
+
+export function selectLayer(layerId: string): void {
+  settleFloating();
+  set({ layerId });
+}
+
+export function selectFrame(frameIndex: number): void {
+  settleFloating();
+  const n = get().doc.frames.length;
+  set({ frameIndex: ((frameIndex % n) + n) % n });
+}
+
+export function setTool(tool: ToolId): void {
+  if (tool !== 'select') settleFloating();
+  set({ tool });
+}
+
+export function swapColors(): void {
+  const { primary, secondary } = get();
+  set({ primary: secondary, secondary: primary });
+}
+
+// ---------------------------------------------------------------------------
+// Selection & clipboard
+// ---------------------------------------------------------------------------
+
+export function setSelection(rect: Rect | null): void {
+  const { doc } = get();
+  set({ selection: rect ? clampRect(rect, doc.width, doc.height) : null });
+}
+
+export function selectAll(): void {
+  settleFloating();
+  const { doc } = get();
+  set({ selection: { x: 0, y: 0, width: doc.width, height: doc.height } });
+}
+
+export function deselect(): void {
+  settleFloating();
+  set({ selection: null });
+}
+
+function activeCel() {
+  const s = get();
+  return { layerId: s.layerId, frameId: s.doc.frames[s.frameIndex].id };
+}
+
+/** Cuts the selected pixels out of the active cel so they can be dragged around. */
+export function liftSelection(): boolean {
+  const s = get();
+  if (!s.selection || s.floating) return false;
+  const { layerId, frameId } = activeCel();
+  const present = s.history.present.doc;
+  const region = copyRegion(present, layerId, frameId, s.selection);
+  if (!region) return false;
+  try {
+    const base = clearCel(present, layerId, frameId, s.selection);
+    set({ floating: { region, x: s.selection.x, y: s.selection.y, base, label: t.tools.select } });
+    preview(pasteRegion(base, layerId, frameId, region, s.selection.x, s.selection.y));
+    return true;
+  } catch (e) {
+    notify((e as Error).message, 'error');
+    return false;
+  }
+}
+
+export function moveFloating(x: number, y: number): void {
+  const { floating } = get();
+  if (!floating) return;
+  const { layerId, frameId } = activeCel();
+  set({
+    floating: { ...floating, x, y },
+    selection: { x, y, width: floating.region.width, height: floating.region.height },
+  });
+  preview(pasteRegion(floating.base, layerId, frameId, floating.region, x, y));
+}
+
+/** Commits a floating selection (if any) as a single undo step. */
+export function settleFloating(): void {
+  const { floating } = get();
+  if (!floating) return;
+  set({ floating: null });
+  commitPreview(floating.label);
+}
+
+export function cancelFloating(): void {
+  if (!get().floating) return;
+  set({ floating: null, selection: null });
+  cancelPreview();
+}
+
+export function copySelection(): boolean {
+  const s = get();
+  if (s.floating) {
+    set({ clipboard: s.floating.region });
+    return true;
+  }
+  if (!s.selection) {
+    notify(t.status.noSelection);
+    return false;
+  }
+  const { layerId, frameId } = activeCel();
+  const region = copyRegion(s.history.present.doc, layerId, frameId, s.selection);
+  if (region) set({ clipboard: region });
+  notify(t.status.copied);
+  return !!region;
+}
+
+export function deleteSelection(label: string = t.menu.deleteSelection): void {
+  const s = get();
+  if (s.floating) {
+    // Dropping the floating pixels keeps the lifted (cleared) area.
+    const base = s.floating.base;
+    set({ floating: null, selection: null });
+    preview(base);
+    commitPreview(label);
+    return;
+  }
+  if (!s.selection) return;
+  const { layerId, frameId } = activeCel();
+  commit((doc) => clearCel(doc, layerId, frameId, s.selection!), label);
+}
+
+export function cutSelection(): void {
+  if (copySelection()) deleteSelection(t.menu.cut);
+}
+
+/** Pastes a region as a floating selection at (x, y) (default: current selection or top-left). */
+export function pasteFloating(region: PixelRegion | null = get().clipboard, at?: Point, label: string = t.menu.paste): void {
+  if (!region) {
+    notify(t.status.nothingToPaste);
+    return;
+  }
+  settleFloating();
+  const s = get();
+  const x = at?.x ?? s.selection?.x ?? 0;
+  const y = at?.y ?? s.selection?.y ?? 0;
+  const { layerId, frameId } = activeCel();
+  const base = s.history.present.doc;
+  try {
+    const doc = pasteRegion(base, layerId, frameId, region, x, y);
+    set({
+      tool: 'select',
+      floating: { region, x, y, base, label },
+      selection: { x, y, width: region.width, height: region.height },
+    });
+    preview(doc);
+  } catch (e) {
+    notify((e as Error).message, 'error');
+  }
+}

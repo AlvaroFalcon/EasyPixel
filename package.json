@@ -1,0 +1,24 @@
+{
+  "name": "easypixel",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Pixel art editor with Claude (MCP) integration and Godot export",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @easypixel/desktop",
+    "dev:web": "npm run dev:web -w @easypixel/desktop",
+    "build": "npm run build -w @easypixel/desktop",
+    "test": "vitest run",
+    "typecheck": "tsc -p packages/core && npm run typecheck -w @easypixel/desktop",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^22.20.5",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  }
+}
