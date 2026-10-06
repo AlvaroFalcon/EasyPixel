@@ -1,193 +1,222 @@
 # EasyPixel
 
-Editor de pixel art para sprites y spritesheets de videojuegos, hecho con **React + TypeScript**
-sobre **Electron**. Pensado para trabajar junto a **Claude vía MCP** (próxima fase) y exportar
-directamente a **Godot 4**.
+A desktop pixel art editor for game sprites and spritesheets, built with **React + TypeScript** on
+**Electron**. It ships with an **MCP server so Claude can draw for you**, live, inside the editor,
+and it exports straight to **Godot 4** (`SpriteFrames`, `AnimatedSprite2D` scenes and `TileSet`s).
 
-> Plan completo y fases: [`docs/PLAN.md`](docs/PLAN.md)
+![EasyPixel editor with an animated slime](docs/images/editor.png)
 
-## Estado
+> The user interface is currently in Spanish (all texts live in
+> [`strings.ts`](apps/desktop/src/renderer/src/strings.ts), ready to be translated).
 
-| Fase | Estado |
-|---|---|
-| 1. Base: modelo de documento, operaciones, historial, tests | ✅ |
-| 2. Editor: lienzo, herramientas, paleta, capas, frames, guardar/abrir | ✅ |
-| 3. Animación: tags, onion skin, previsualización | ✅ |
-| 4. Servidor MCP para Claude | ✅ |
-| 5. Exportación Godot (`SpriteFrames.tres`) | ✅ |
-| 6. Extras: GIF, TileSet, paletas, referencia, instaladores | ✅ |
+## Download
 
-## Instalar
+Grab the installer for your OS from the
+[**latest release**](https://github.com/AlvaroFalcon/EasyPixel/releases/latest):
 
-Descarga el instalador de la última versión en **Releases** (lo genera
-`.github/workflows/release.yml` al publicar una etiqueta `v*`):
-
-| Sistema | Archivo | Notas |
+| OS | File | Notes |
 |---|---|---|
-| Windows | `EasyPixel-x.y.z-win-x64.exe` | Instalador NSIS (permite elegir carpeta). |
-| macOS | `EasyPixel-x.y.z-mac-universal.dmg` | Sin firmar: la primera vez, clic derecho → Abrir. |
-| Linux | `.AppImage` o `.deb` | AppImage portable o paquete para Debian/Ubuntu. |
+| Windows | `EasyPixel-x.y.z-win-x64.exe` | NSIS installer. Unsigned: SmartScreen may ask, choose *More info → Run anyway*. |
+| macOS | `EasyPixel-x.y.z-mac-universal.dmg` | Intel + Apple Silicon. Unsigned: the first time, right click the app → *Open*. |
+| Linux | `.AppImage` or `.deb` | Portable AppImage or Debian/Ubuntu package. |
 
-O constrúyelo tú: `npm run dist -w @easypixel/desktop` (instalador para tu sistema en
-`apps/desktop/release/`).
+## Draw with Claude (MCP)
 
-## Desarrollo
+![Claude drawing a slime and its animations through MCP](docs/images/claude-drawing.gif)
 
-Requisitos: Node.js 20+ (probado con Node 22) y npm 10+.
+*An MCP client creating a sprite, drawing nine frames with `draw_grid`, naming the `idle` and
+`jump` animations and playing them, all live in the editor.*
 
-```bash
-npm install          # instala dependencias (descarga Electron)
-npm run dev          # abre la app de escritorio con recarga en caliente
-npm run dev:web      # solo la interfaz en el navegador: http://localhost:5173
-npm run build        # compila main, preload y renderer en apps/desktop/out
-```
+When EasyPixel starts it runs a local MCP server at `http://127.0.0.1:7777/mcp` (only reachable
+from your computer). The **Claude → Conectar con Claude…** menu shows the exact configuration for
+your install, with copy buttons.
 
-Calidad:
-
-```bash
-npm test             # tests unitarios (Vitest)
-npm run typecheck    # TypeScript estricto en todos los paquetes
-npm run test:e2e     # tests de interfaz en navegador (Playwright)
-npm run test:electron  # integración real: app Electron + clientes MCP (HTTP y stdio) + export Godot
-```
-
-## Estructura
-
-```
-packages/core        Lógica pura en TS (sin DOM): modelo, dibujo, capas, frames,
-                     paletas, composición, spritesheets, formato .epx.json, historial
-apps/desktop
-  src/main           Proceso principal de Electron (ventana, diálogos de archivo)
-  src/preload        Puente seguro window.easypixel (contextIsolation + sandbox)
-  src/renderer       Interfaz React (store con Zustand, lienzo Canvas 2D)
-e2e                  Tests de interfaz con Playwright
-```
-
-El documento es **inmutable**: cada edición crea un documento nuevo que comparte los datos
-no modificados con el anterior. Así deshacer/rehacer es trivial y funcionará igual para las
-ediciones que haga Claude (el historial guarda el origen de cada cambio).
-
-## Atajos
-
-| Tecla | Acción | Tecla | Acción |
-|---|---|---|---|
-| `B` | Lápiz | `X` | Intercambiar colores |
-| `E` | Borrador | `[` / `]` | Tamaño de pincel |
-| `G` | Cubo de relleno | `,` / `.` | Frame anterior / siguiente |
-| `L` | Línea (`Shift` = 45°) | `+` / `-` / `0` | Zoom / ajustar |
-| `U` | Rectángulo (`Shift` = cuadrado) | `Espacio` + arrastrar | Mover vista |
-| `O` | Elipse (`Shift` = círculo) | `Alt` + clic | Cuentagotas rápido |
-| `I` | Cuentagotas | `Ctrl+Z` / `Ctrl+Y` | Deshacer / rehacer |
-| `M` | Selección | `Ctrl+C/X/V` | Copiar / cortar / pegar |
-| `H` | Mano | `Supr` | Borrar selección |
-| `Ctrl+S` | Guardar | `Intro` / `Esc` | Fijar / cancelar selección flotante |
-| `Ctrl+O` | Abrir | `Ctrl+G` | Rejilla |
-| `P` | Reproducir / pausar animación | `Mayús`+clic en frame | Seleccionar rango de frames |
-| `Ctrl+Shift+E` | Re-exportar a Godot | | |
-| `Ctrl+I` | Importar PNG | `Ctrl+E` | Exportar PNG |
-
-Clic izquierdo dibuja con el color principal y clic derecho con el secundario.
-Por defecto el secundario es transparente, así que el clic derecho borra.
-
-## Exportar a Godot 4
-
-**Archivo → Exportar a Godot…** y elige una carpeta dentro de tu proyecto (EasyPixel busca
-`project.godot` hacia arriba y calcula la ruta `res://`). Se generan tres archivos:
-
-| Archivo | Para qué |
-|---|---|
-| `<nombre>.png` | Spritesheet en rejilla (columnas, separación y escala configurables). Vale también para `Sprite2D` con `hframes`/`vframes`. |
-| `<nombre>.tres` | `SpriteFrames` con un `AtlasTexture` por frame y **una animación por cada animación de EasyPixel**: velocidad y duración relativa calculadas a partir de los ms de cada frame, bucle respetado y ping-pong/reversa expandidos (Godot solo reproduce hacia delante). Sin animaciones se exporta `default`. |
-| `<nombre>.tscn` | Escena `AnimatedSprite2D` lista para instanciar: `texture_filter = Nearest` y `autoplay` (por defecto `idle`). |
-
-Los ajustes se guardan en el `.epx.json`, así que después basta con **Ctrl+Shift+E** para
-re-exportar (Godot reimporta los cambios automáticamente). Claude puede hacer lo mismo con la
-herramienta MCP `export_godot`.
-
-Consejos para pixel art en Godot: en *Project Settings → Rendering → Textures* pon
-*Default Texture Filter* en **Nearest** (la escena exportada ya lo fuerza en su nodo) y usa
-*Display → Window → Stretch* con modo `viewport` o `canvas_items` y escala entera.
-
-> Validado con Godot 4.5.1: `npm run test:electron` con `GODOT_BIN=/ruta/a/godot` importa y carga
-> los recursos exportados en un Godot real (headless).
-
-## Dibujar con Claude (MCP)
-
-Al abrir EasyPixel se inicia un servidor MCP local en `http://127.0.0.1:7777/mcp`
-(solo accesible desde tu equipo). El menú **Claude → Conectar con Claude…** muestra la
-configuración exacta para tu instalación, con botón de copiar.
-
-**Claude Code** (una sola vez):
+**Claude Code** (once):
 
 ```bash
 claude mcp add --transport http easypixel http://127.0.0.1:7777/mcp
 ```
 
-**Claude Desktop**: añade a `claude_desktop_config.json` (Ajustes → Desarrollador → Editar
-configuración) el bloque que muestra el diálogo. Usa un pequeño puente stdio que EasyPixel copia en
-su carpeta de datos (una ruta estable entre versiones) y que se ejecuta con el propio binario de
-EasyPixel, así que no necesitas Node instalado:
+**Claude Desktop**: add the block shown in that dialog to `claude_desktop_config.json`
+(*Settings → Developer → Edit Config*). It uses a tiny stdio bridge that EasyPixel copies to its
+data folder (a path that stays valid across updates) and runs with the EasyPixel binary itself, so
+you don't need Node.js:
 
 ```json
 {
   "mcpServers": {
     "easypixel": {
-      "command": "<ruta a Electron/EasyPixel>",
-      "args": ["<carpeta de datos de EasyPixel>/mcp-bridge.js"],
+      "command": "<path to EasyPixel>",
+      "args": ["<EasyPixel data folder>/mcp-bridge.js"],
       "env": { "ELECTRON_RUN_AS_NODE": "1" }
     }
   }
 }
 ```
 
-Luego pídele, por ejemplo: *«Dibuja en EasyPixel un caballero de 32×32 con paleta Endesga 32 y
-crea una animación idle de 4 frames»*.
+Then ask something like: *"In EasyPixel, draw a 32×32 knight with the Endesga 32 palette and a
+4-frame idle animation, then export it to my Godot project in ~/games/my_game/sprites/knight"*.
 
-- Lo que dibuja Claude aparece **en directo**; cada acción es un paso del historial marcado con ✦
-  y puedes deshacerlo con `Ctrl+Z`.
-- Si Claude crea un sprite, se abre en **una pestaña nueva**: nunca pisa tu trabajo.
-- El indicador **MCP** de la barra de estado muestra si el servidor está activo y qué está
-  haciendo Claude.
-- Puerto configurable con la variable `EASYPIXEL_MCP_PORT`.
+- Everything Claude draws shows up **live**. Each action is one undo step marked with ✦, so you can
+  revert it with `Ctrl+Z`.
+- Sprites created by Claude open in a **new tab**, so your work is never overwritten.
+- The **MCP** indicator in the status bar shows whether the server is running and what Claude is
+  doing.
+- The port can be changed with the `EASYPIXEL_MCP_PORT` environment variable.
 
-Herramientas disponibles:
+Available tools:
 
-| Grupo | Herramientas |
+| Group | Tools |
 |---|---|
 | Sprites | `get_editor_state`, `create_sprite`, `select_sprite`, `save_sprite` |
-| Paleta | `set_palette`, `replace_color` |
-| Dibujo | `draw_grid` (frame completo como texto), `draw_pixels`, `draw_shape`, `fill`, `clear`, `transform` |
-| Capas | `add_layer`, `update_layer`, `delete_layer` |
-| Frames y animaciones | `add_frame`, `delete_frame`, `set_frame_duration`, `create_animation`, `update_animation`, `delete_animation` |
-| Revisión | `get_frame_image` (PNG ampliado con rejilla), `get_spritesheet_image`, `get_frame_grid`, `undo` |
-| Godot | `export_godot` (PNG + `SpriteFrames.tres` + escena `.tscn` en tu proyecto) |
+| Palette | `set_palette`, `replace_color` |
+| Drawing | `draw_grid` (a whole frame as text), `draw_pixels`, `draw_shape`, `fill`, `clear`, `transform` |
+| Layers | `add_layer`, `update_layer`, `delete_layer` |
+| Frames & animations | `add_frame`, `delete_frame`, `set_frame_duration`, `create_animation`, `update_animation`, `delete_animation` |
+| Review | `get_frame_image` (upscaled PNG with a pixel grid), `get_spritesheet_image`, `get_frame_grid`, `undo` |
+| Godot | `export_godot` (PNG + `SpriteFrames.tres` + `.tscn` scene), `export_godot_tileset` |
 
-Además expone el prompt `pixel_art_sprite` (flujo guiado) e instrucciones de servidor con las
-convenciones (coordenadas, formato de rejilla) y consejos de pixel art.
+The server also exposes a `pixel_art_sprite` prompt (guided workflow) and server instructions with
+the conventions (coordinates, grid format) and pixel art tips. `draw_grid` takes one string per row
+and one character per pixel (`0-9a-zA-Z` = palette index, `.` = transparent), which is the most
+reliable way for a language model to draw.
 
-## Más herramientas
+## Example: animated slime
 
-- **GIF animado**: Archivo → Exportar PNG / GIF… → «GIF animado» (por animación, con sus tiempos y
-  dirección).
-- **TileSet de Godot**: dibuja los tiles en un lienzo múltiplo del tamaño de tile (activa
-  Ver → Rejilla de tiles) y exporta con Archivo → Exportar a Godot… → «TileSet». Solo se registran
-  las celdas con píxeles. Claude puede hacerlo con `export_godot_tileset`.
-- **Imagen de referencia**: Ver → Imagen de referencia… (detrás del sprite o encima para calcar,
-  con opacidad y tamaño). No se exporta.
-- **Mis paletas**: en el menú ⋯ del panel de paleta puedes guardar la paleta actual, importarla de
-  **Lospec** por nombre o enlace (p. ej. `resurrect-64`), o desde `.gpl`/`.hex`.
+Made entirely through the MCP tools ([`examples/slime`](examples/slime)): a 24×24 slime with a
+4-frame `idle` and a 5-frame `jump`.
 
-## Animaciones
+<p>
+  <img src="examples/slime/slime.gif" alt="Animated slime preview" width="192">
+</p>
 
-- Selecciona un rango de frames con **Mayús+clic** en el timeline y pulsa **+ Nueva animación**
-  (`idle`, `walk`, `run`…). Cada animación tiene dirección (adelante, atrás, ping-pong) y bucle.
-- Las animaciones aparecen como barras de color sobre los frames: clic para seleccionarla
-  (la vista previa la reproduce), doble clic para editarla.
-- La duración se define por frame (ms), igual que en Aseprite; al exportar a Godot se convertirá
-  a velocidad + duración relativa de `SpriteFrames`.
-- **Papel cebolla**: muestra los frames vecinos (rojo = anterior, azul = siguiente).
+![Slime spritesheet, 9 frames of 24×24 (shown at 4×)](docs/images/slime-sheet-x4.png)
 
-## Formato `.epx.json`
+The folder contains the editable project (`slime.epx.json`), the spritesheet, and the Godot
+`SpriteFrames` resource and scene, validated in Godot 4.5.1.
 
-JSON legible (capas, frames, tags de animación, paleta en hex y píxeles RGBA en base64 por
-*cel*), apto para git y fácil de leer para Claude.
+## Features
+
+**Editor**
+- Canvas with zoom, pan, pixel grid and tile grid (8/16/32).
+- Tools: pencil (pixel-perfect mode, brush size), eraser, bucket fill, line, rectangle, ellipse,
+  eyedropper, rectangular selection (move, copy/cut/paste) and X/Y mirror drawing.
+- Layers (visibility, lock, opacity, reorder, duplicate, merge down) and unlimited undo/redo.
+- Palettes: presets (PICO-8, Sweetie 16, Endesga 32, Game Boy, 1-bit), RGBA editing, your own saved
+  palettes, `.gpl`/`.hex` import, and **Lospec** import by name or URL.
+- Reference image behind the sprite, or on top for tracing, with opacity and size. It is never
+  exported.
+- Several sprites open at once in tabs.
+
+**Animation**
+- Frame timeline with per-frame duration (ms), like Aseprite.
+- Named animations (`idle`, `walk`, `run`…) with direction (forward, reverse, ping-pong) and loop,
+  shown as colored bars above the frames. Shift+click selects a frame range.
+- Onion skin (red = previous, blue = next) and a looping preview with exact timing.
+
+**Import / export**
+- PNG import (as a new sprite, slicing spritesheets, or pasted into the current layer).
+- PNG export of one frame or a spritesheet grid, and **animated GIF** per animation.
+- Own `.epx.json` format: readable JSON (layers, frames, animations, palette, base64 RGBA per cel),
+  friendly to git and to Claude.
+
+## Godot 4 export
+
+![Godot export dialog](docs/images/godot-export.png)
+
+*File → Exportar a Godot…*: pick a folder inside your project. EasyPixel looks for `project.godot`
+in that folder or above it and builds the `res://` paths. It writes:
+
+| File | What for |
+|---|---|
+| `<name>.png` | Grid spritesheet (columns, spacing and scale are configurable). It also works for a `Sprite2D` with `hframes`/`vframes`. |
+| `<name>.tres` | `SpriteFrames` with one `AtlasTexture` per frame and **one animation per EasyPixel animation**. Speed and relative durations come from each frame's ms; loop is kept, and ping-pong/reverse are expanded because Godot only plays forward. Without animations, a `default` one is exported. |
+| `<name>.tscn` | A ready-to-instance `AnimatedSprite2D` scene with `texture_filter = Nearest` and `autoplay` (`idle` by default). |
+
+The settings are saved in the `.epx.json`, so after the first export **Ctrl+Shift+E** re-exports
+and Godot reimports the changes automatically.
+
+### TileSets
+
+![Tile grid and reference image](docs/images/tileset-reference.png)
+
+Draw your tiles on a canvas that is a multiple of the tile size (turn on *View → tile grid*) and
+choose **TileSet** in the Godot dialog. You get `<name>.png` and `<name>_tileset.tres` with a
+`TileSetAtlasSource`, where only non-empty cells become tiles. In Godot, add a `TileMapLayer`,
+assign the TileSet and paint.
+
+**Pixel art tips for Godot:** set *Project Settings → Rendering → Textures → Default Texture
+Filter* to **Nearest** (the exported scene already forces it on its node) and use
+*Display → Window → Stretch* in `viewport` or `canvas_items` mode with integer scaling.
+
+Every export format is validated against a real Godot 4.5.1 in CI: the resources are imported
+headless, loaded, and the TileSet is used to paint a `TileMapLayer`.
+
+## Keyboard shortcuts
+
+| Key | Action | Key | Action |
+|---|---|---|---|
+| `B` | Pencil | `X` | Swap colors |
+| `E` | Eraser | `[` / `]` | Brush size |
+| `G` | Bucket fill | `,` / `.` | Previous / next frame |
+| `L` | Line (`Shift` = 45°) | `+` / `-` / `0` | Zoom / fit |
+| `U` | Rectangle (`Shift` = square) | `Space` + drag | Pan |
+| `O` | Ellipse (`Shift` = circle) | `Alt` + click | Quick eyedropper |
+| `I` | Eyedropper | `Ctrl+Z` / `Ctrl+Y` | Undo / redo |
+| `M` | Selection | `Ctrl+C/X/V` | Copy / cut / paste |
+| `H` | Hand | `Delete` | Clear selection |
+| `P` | Play / pause animation | `Enter` / `Esc` | Commit / cancel floating selection |
+| `Ctrl+S` | Save | `Ctrl+G` | Pixel grid |
+| `Ctrl+O` | Open | `Shift` + click a frame | Select a frame range |
+| `Ctrl+I` | Import PNG | `Ctrl+E` | Export PNG / GIF |
+| `Ctrl+Shift+E` | Re-export to Godot | | |
+
+Left click draws with the primary color and right click with the secondary one. The secondary
+color is transparent by default, so right click erases.
+
+## Development
+
+Requirements: Node.js 20+ (tested with Node 22) and npm 10+.
+
+```bash
+npm install          # installs dependencies (downloads Electron)
+npm run dev          # desktop app with hot reload
+npm run dev:web      # the UI alone in a browser: http://localhost:5173
+npm run build        # builds main, preload, renderer and the MCP bridge into apps/desktop/out
+npm run dist -w @easypixel/desktop   # installer for your OS in apps/desktop/release/
+```
+
+Quality checks (all of them run in CI):
+
+```bash
+npm test               # unit tests (Vitest)
+npm run typecheck      # strict TypeScript in every package
+npm run test:e2e       # UI tests in a browser (Playwright)
+npm run test:electron  # real Electron app + MCP clients (HTTP and stdio) + Godot exports
+                       # (set GODOT_BIN=/path/to/godot to validate with a real Godot 4)
+```
+
+Releases: run *Actions → Release → Run workflow* with a version such as `v0.2.0`, or push a `v*`
+tag. Installers for Windows, macOS and Linux are built and published to GitHub Releases.
+
+### Project layout
+
+```
+packages/core        Pure TypeScript logic (no DOM): document model, drawing, layers, frames,
+                     palettes, compositing, spritesheets, GIF encoder, Godot export,
+                     .epx.json format, undo history, agent helpers (text grids)
+apps/desktop
+  src/main           Electron main process: window, file dialogs, MCP server (HTTP)
+  src/bridge         stdio ⇄ HTTP bridge for Claude Desktop
+  src/preload        Safe window.easypixel bridge (contextIsolation + sandbox)
+  src/renderer       React UI (Zustand store, Canvas 2D), MCP tool executor
+e2e                  Browser UI tests (Playwright)
+e2e-electron         Electron + MCP + Godot integration tests
+examples             Sample sprites made with EasyPixel
+```
+
+Documents are **immutable**: every edit creates a new document that shares unchanged data with the
+previous one. That makes undo/redo trivial and works the same for edits made by Claude, since the
+history records who made each change.
+
+See [`docs/PLAN.md`](docs/PLAN.md) for the original plan and phases (in Spanish).
