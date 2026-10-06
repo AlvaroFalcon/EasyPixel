@@ -5,27 +5,41 @@
   "description": "EasyPixel desktop app (Electron + React)",
   "main": "out/main/index.js",
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "npm run build:bridge && electron-vite dev",
     "dev:web": "vite --config vite.web.config.ts",
-    "build": "electron-vite build",
+    "build": "npm run build:bridge && electron-vite build",
     "build:web": "vite build --config vite.web.config.ts",
     "preview": "electron-vite preview",
-    "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.web.json"
+    "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.web.json",
+    "dist": "npm run build && electron-builder --publish never",
+    "dist:dir": "npm run build && electron-builder --dir --publish never",
+    "build:bridge": "node scripts/build-bridge.mjs"
   },
   "dependencies": {
-    "@easypixel/core": "^0.1.0",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@easypixel/core": "^0.1.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.2.0",
-    "electron": "^44.5.1",
+    "electron": "44.5.1",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
+    "esbuild": "^0.25.12",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "vite": "^7.1.0",
     "zustand": "^5.0.8"
+  },
+  "author": {
+    "name": "EasyPixel"
+  },
+  "homepage": "https://github.com/AlvaroFalcon/EasyPixel",
+  "productName": "EasyPixel",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AlvaroFalcon/EasyPixel.git"
   }
 }

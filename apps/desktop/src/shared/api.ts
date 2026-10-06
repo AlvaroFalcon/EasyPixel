@@ -31,7 +31,7 @@ export interface SaveFileOptions {
 import type { McpCall, McpStatus, McpToolResult } from './mcpTypes';
 
 export interface EasyPixelMcpApi {
-  getStatus(): Promise<McpStatus>;
+  getStatus(): Promise<McpStatus | null>;
   onStatus(cb: (status: McpStatus) => void): () => void;
   /** Registers the executor for tool calls coming from MCP clients. */
   onCall(cb: (call: McpCall) => void): () => void;

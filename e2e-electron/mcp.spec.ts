@@ -62,12 +62,17 @@ test('Claude Code style client (Streamable HTTP) draws in the open editor', asyn
 });
 
 test('Claude Desktop style client (stdio bridge) reaches the same server', async () => {
+  // Use exactly the command the "Connect to Claude" dialog shows to the user.
+  const win = await app.firstWindow();
+  const status = await win.evaluate(() => window.easypixel!.mcp.getStatus());
+  expect(status!.bridge.args[0]).toMatch(/mcp-bridge\.js$/);
+  expect(existsSync(status!.bridge.args[0])).toBe(true);
   const client = new Client({ name: 'bridge-test', version: '1.0.0' });
   await client.connect(
     new StdioClientTransport({
-      command: ELECTRON,
-      args: [join(APP, 'out/main/mcp-bridge.js')],
-      env: { ...(process.env as Record<string, string>), ELECTRON_RUN_AS_NODE: '1', EASYPIXEL_MCP_URL: URL_ },
+      command: status!.bridge.command,
+      args: status!.bridge.args,
+      env: { ...(process.env as Record<string, string>), ...status!.bridge.env },
     }),
   );
   const state = (await client.callTool({ name: 'get_editor_state', arguments: {} })) as Result;

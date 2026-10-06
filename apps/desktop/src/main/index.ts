@@ -10,22 +10,41 @@ const dirtyWindows = new WeakSet<BrowserWindow>();
 let mainWindow: BrowserWindow | null = null;
 let mcp: McpServerHandle | null = null;
 
-function startMcp(): void {
+/**
+ * Copies the bundled stdio bridge to the user data folder: a path that stays
+ * valid across launches (an AppImage or asar path does not), for Claude Desktop.
+ */
+async function installBridge(): Promise<string> {
+  const source = join(__dirname, '../bridge/mcp-bridge.js');
+  const target = join(app.getPath('userData'), 'mcp-bridge.js');
+  const code = await readFile(source, 'utf8');
+  const current = await readFile(target, 'utf8').catch(() => '');
+  if (current !== code) {
+    await mkdir(dirname(target), { recursive: true });
+    await writeFile(target, code);
+  }
+  return target;
+}
+
+async function startMcp(): Promise<void> {
   const port = Number(process.env.EASYPIXEL_MCP_PORT) || MCP_DEFAULT_PORT;
+  const bridgePath = await installBridge().catch(() => join(__dirname, '../bridge/mcp-bridge.js'));
   mcp = startMcpServer({
     port,
     getWindow: () => mainWindow,
-    // Claude Desktop launches this command; the Electron binary doubles as Node.
+    // Claude Desktop launches this command; the EasyPixel/Electron binary doubles as Node.
+    // In an AppImage, execPath points into a temporary mount: use the AppImage file itself.
     bridge: {
-      command: process.execPath,
-      args: [join(__dirname, 'mcp-bridge.js')],
+      command: process.env.APPIMAGE ?? process.execPath,
+      // AppImage's AppRun prepends --no-sandbox (which Node would reject) unless it already sees it;
+      // placed after the script it is just an ignored script argument.
+      args: process.env.APPIMAGE ? [bridgePath, '--no-sandbox'] : [bridgePath],
       env: { ELECTRON_RUN_AS_NODE: '1', ...(port !== MCP_DEFAULT_PORT ? { EASYPIXEL_MCP_URL: `http://127.0.0.1:${port}/mcp` } : {}) },
     },
     onStatus: (status) => {
       if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(MCP_IPC.status, status);
     },
   });
-  ipcMain.handle(MCP_IPC.info, () => mcp?.status);
 }
 
 function createWindow(): BrowserWindow {
@@ -78,6 +97,9 @@ function createWindow(): BrowserWindow {
 }
 
 function registerIpc(): void {
+  // Null until the server starts; the renderer also receives later updates via MCP_IPC.status.
+  ipcMain.handle(MCP_IPC.info, () => mcp?.status ?? null);
+
   ipcMain.handle(IPC.openFile, async (event, options: OpenFileOptions) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     const result = await dialog.showOpenDialog(win!, {
@@ -169,7 +191,7 @@ async function findGodotProject(dir: string): Promise<GodotProjectInfo | null> {
 app.whenReady().then(() => {
   registerIpc();
   mainWindow = createWindow();
-  startMcp();
+  void startMcp();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow();
   });

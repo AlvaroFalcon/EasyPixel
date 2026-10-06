@@ -15,12 +15,25 @@ directamente a **Godot 4**.
 | 3. Animación: tags, onion skin, previsualización | ✅ |
 | 4. Servidor MCP para Claude | ✅ |
 | 5. Exportación Godot (`SpriteFrames.tres`) | ✅ |
+| 6. Extras: GIF, TileSet, paletas, referencia, instaladores | ✅ |
 
-## Requisitos
+## Instalar
 
-- Node.js 20+ (probado con Node 22) y npm 10+
+Descarga el instalador de la última versión en **Releases** (lo genera
+`.github/workflows/release.yml` al publicar una etiqueta `v*`):
 
-## Uso
+| Sistema | Archivo | Notas |
+|---|---|---|
+| Windows | `EasyPixel-x.y.z-win-x64.exe` | Instalador NSIS (permite elegir carpeta). |
+| macOS | `EasyPixel-x.y.z-mac-universal.dmg` | Sin firmar: la primera vez, clic derecho → Abrir. |
+| Linux | `.AppImage` o `.deb` | AppImage portable o paquete para Debian/Ubuntu. |
+
+O constrúyelo tú: `npm run dist -w @easypixel/desktop` (instalador para tu sistema en
+`apps/desktop/release/`).
+
+## Desarrollo
+
+Requisitos: Node.js 20+ (probado con Node 22) y npm 10+.
 
 ```bash
 npm install          # instala dependencias (descarga Electron)
@@ -111,15 +124,16 @@ claude mcp add --transport http easypixel http://127.0.0.1:7777/mcp
 ```
 
 **Claude Desktop**: añade a `claude_desktop_config.json` (Ajustes → Desarrollador → Editar
-configuración) el bloque que muestra el diálogo. Usa un pequeño puente stdio que se ejecuta con el
-propio binario de EasyPixel/Electron, así que no necesitas Node instalado:
+configuración) el bloque que muestra el diálogo. Usa un pequeño puente stdio que EasyPixel copia en
+su carpeta de datos (una ruta estable entre versiones) y que se ejecuta con el propio binario de
+EasyPixel, así que no necesitas Node instalado:
 
 ```json
 {
   "mcpServers": {
     "easypixel": {
       "command": "<ruta a Electron/EasyPixel>",
-      "args": ["<ruta>/apps/desktop/out/main/mcp-bridge.js"],
+      "args": ["<carpeta de datos de EasyPixel>/mcp-bridge.js"],
       "env": { "ELECTRON_RUN_AS_NODE": "1" }
     }
   }
@@ -150,6 +164,18 @@ Herramientas disponibles:
 
 Además expone el prompt `pixel_art_sprite` (flujo guiado) e instrucciones de servidor con las
 convenciones (coordenadas, formato de rejilla) y consejos de pixel art.
+
+## Más herramientas
+
+- **GIF animado**: Archivo → Exportar PNG / GIF… → «GIF animado» (por animación, con sus tiempos y
+  dirección).
+- **TileSet de Godot**: dibuja los tiles en un lienzo múltiplo del tamaño de tile (activa
+  Ver → Rejilla de tiles) y exporta con Archivo → Exportar a Godot… → «TileSet». Solo se registran
+  las celdas con píxeles. Claude puede hacerlo con `export_godot_tileset`.
+- **Imagen de referencia**: Ver → Imagen de referencia… (detrás del sprite o encima para calcar,
+  con opacidad y tamaño). No se exporta.
+- **Mis paletas**: en el menú ⋯ del panel de paleta puedes guardar la paleta actual, importarla de
+  **Lospec** por nombre o enlace (p. ej. `resurrect-64`), o desde `.gpl`/`.hex`.
 
 ## Animaciones
 

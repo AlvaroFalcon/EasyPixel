@@ -80,4 +80,4 @@ packages/core: modelo, operaciones, composición, serialización, export Godot (
 3. **Animación** — timeline con tags, onion skin, panel de previsualización, vista de spritesheet. ✅
 4. **MCP** — servidor en Electron main, puente stdio, sincronización en vivo, feedback visual. ✅
 5. **Godot** — export PNG + `SpriteFrames.tres` + escena `.tscn` a la carpeta del proyecto (validado con Godot 4.5.1); import PNG/sheets. ✅
-6. **Extras** — TileSet, GIF, librería de paletas, imagen de referencia.
+6. **Extras** — TileSet, GIF, librería de paletas (+ Lospec), imagen de referencia, instaladores y CI. ✅

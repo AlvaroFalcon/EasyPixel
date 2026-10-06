@@ -7,13 +7,7 @@ export default defineConfig({
     build: {
       // @easypixel/core ships TypeScript sources, so it must be bundled, not required at runtime.
       externalizeDeps: { exclude: ['@easypixel/core'] },
-      rollupOptions: {
-        input: {
-          index: resolve(__dirname, 'src/main/index.ts'),
-          // stdio bridge for Claude Desktop (run with ELECTRON_RUN_AS_NODE=1)
-          'mcp-bridge': resolve(__dirname, 'src/bridge/index.ts'),
-        },
-      },
+      // The stdio bridge for Claude Desktop is bundled separately (scripts/build-bridge.mjs).
     },
   },
   preload: {

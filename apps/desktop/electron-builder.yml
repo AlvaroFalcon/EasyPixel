@@ -1,0 +1,37 @@
+# Installers: `npm run dist` (current OS) — see .github/workflows/release.yml for all platforms.
+appId: com.easypixel.app
+productName: EasyPixel
+executableName: easypixel
+copyright: EasyPixel
+directories:
+  buildResources: build
+  output: release/${version}
+files:
+  - out/**
+  - '!out/web/**'
+  - '!out/types/**'
+  - package.json
+asar: true
+# @easypixel/core is bundled by electron-vite; only real runtime deps (MCP SDK, zod) ship in node_modules.
+npmRebuild: false
+artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+mac:
+  category: public.app-category.graphics-design
+  target:
+    - target: dmg
+      arch: [universal]
+  # Unsigned builds: macOS will ask to confirm the first launch (right click → Open).
+  identity: null
+linux:
+  executableName: easypixel
+  category: Graphics
+  target: [AppImage, deb]
+  maintainer: EasyPixel
