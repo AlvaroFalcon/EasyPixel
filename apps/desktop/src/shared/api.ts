@@ -51,6 +51,13 @@ export interface FileToWrite {
   data: string | Uint8Array;
 }
 
+export interface WindowState {
+  title: string;
+  dirty: boolean;
+  /** Texts of the "unsaved changes" dialog, in the UI language. */
+  quitPrompt: { message: string; detail: string; discard: string; cancel: string };
+}
+
 export interface EasyPixelApi {
   mcp: EasyPixelMcpApi;
   pickDirectory(title?: string): Promise<string | null>;
@@ -64,7 +71,7 @@ export interface EasyPixelApi {
   openFile(options: OpenFileOptions): Promise<OpenedFile | null>;
   /** Resolves to the path written, or null when the dialog was cancelled. */
   saveFile(options: SaveFileOptions): Promise<string | null>;
-  setWindowState(state: { title: string; dirty: boolean }): void;
+  setWindowState(state: WindowState): void;
 }
 
 export const IPC = {

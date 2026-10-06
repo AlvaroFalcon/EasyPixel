@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "EasyPixel desktop app (Electron + React)",
+  "license": "MIT",
   "main": "out/main/index.js",
   "scripts": {
     "dev": "npm run build:bridge && electron-vite dev",
@@ -34,7 +35,7 @@
     "zustand": "^5.0.8"
   },
   "author": {
-    "name": "EasyPixel"
+    "name": "Alvaro Falcon"
   },
   "homepage": "https://github.com/AlvaroFalcon/EasyPixel",
   "productName": "EasyPixel",

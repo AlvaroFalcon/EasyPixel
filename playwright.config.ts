@@ -7,6 +7,8 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:5173',
     viewport: { width: 1400, height: 900 },
+    // The tests use the Spanish UI texts; the app picks the system language on first run.
+    locale: 'es-ES',
   },
   webServer: {
     command: 'npm run dev:web',

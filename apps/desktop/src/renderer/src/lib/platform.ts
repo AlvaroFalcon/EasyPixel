@@ -1,4 +1,4 @@
-import type { FileToWrite, GodotProjectInfo, OpenedFile, OpenFileOptions, SaveFileOptions } from '../../../shared/api';
+import type { FileToWrite, GodotProjectInfo, OpenedFile, OpenFileOptions, SaveFileOptions, WindowState } from '../../../shared/api';
 
 /**
  * File access that works both inside Electron (native dialogs, real paths)
@@ -37,8 +37,8 @@ export async function saveFile(options: SaveFileOptions): Promise<string | null>
   return name;
 }
 
-export function setWindowState(title: string, dirty: boolean): void {
-  if (window.easypixel) window.easypixel.setWindowState({ title, dirty });
+export function setWindowState(title: string, dirty: boolean, quitPrompt: WindowState['quitPrompt']): void {
+  if (window.easypixel) window.easypixel.setWindowState({ title, dirty, quitPrompt });
   else document.title = `${dirty ? '• ' : ''}${title} — EasyPixel`;
 }
 

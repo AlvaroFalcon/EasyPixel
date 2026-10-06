@@ -120,7 +120,7 @@ export function PalettePanel() {
     if (!file) return;
     const colors = parsePaletteFile(file.data as string, file.name);
     if (colors.length === 0) {
-      notify(`${file.name}: 0 colores`, 'error');
+      notify(fmt(t.palette.noColors, { name: file.name }), 'error');
       return;
     }
     commit((d) => setPalette(d, colors), t.palette.title);

@@ -546,7 +546,7 @@ function GodotDialog() {
         <div className="field">
           {t.godot.folder}
           <div className="field-row">
-            <input value={dir} onChange={(e) => setDir(e.target.value)} placeholder="/ruta/a/mi-juego/sprites" data-testid="godot-dir" />
+            <input value={dir} onChange={(e) => setDir(e.target.value)} placeholder={t.godot.folderPlaceholder} data-testid="godot-dir" />
             <button
               type="button"
               onClick={() => void pickDirectory(t.godot.folder).then((picked) => picked && setDir(picked))}

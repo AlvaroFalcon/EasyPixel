@@ -20,7 +20,7 @@ import {
 import { loadReference } from '../store/reference';
 import { fitToView, stepZoom } from '../store/view';
 import { fileNameOf } from '../lib/platform';
-import { t } from '../strings';
+import { LANGUAGES, setLanguage, t, useLanguage } from '../strings';
 import { Icon } from './Icon';
 
 const mod = navigator.platform.toLowerCase().includes('mac') ? '⌘' : 'Ctrl+';
@@ -92,6 +92,7 @@ export function MenuBar() {
   const showGrid = useEditor((s) => s.showGrid);
   const hasGodot = useEditor((s) => !!s.history.present.doc.godot);
   const tileGrid = useEditor((s) => s.tileGrid);
+  const lang = useLanguage((s) => s.lang);
   const dirty = useEditor(isDirty);
   const name = useEditor((s) => (s.filePath ? fileNameOf(s.filePath) : `${s.doc.name} (${t.untitled})`));
 
@@ -140,6 +141,12 @@ export function MenuBar() {
     { label: t.menu.zoomFit, shortcut: '0', action: fitToView },
     'separator',
     { label: t.reference.load, action: () => void loadReference() },
+    'separator',
+    ...LANGUAGES.map((l) => ({
+      label: `${t.language.menu}: ${t.language[l]}`,
+      checked: lang === l,
+      action: () => setLanguage(l),
+    })),
   ];
 
   return (
@@ -162,7 +169,7 @@ export function MenuBar() {
         </button>
       </div>
       <div className="doc-title" data-testid="doc-title">
-        {dirty && <span className="dirty-dot" title="Cambios sin guardar" />}
+        {dirty && <span className="dirty-dot" title={t.unsavedChanges} />}
         {name}
       </div>
     </header>

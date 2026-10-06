@@ -2,7 +2,7 @@
 appId: com.easypixel.app
 productName: EasyPixel
 executableName: easypixel
-copyright: EasyPixel
+copyright: Copyright © 2026 Alvaro Falcon
 directories:
   buildResources: build
   output: release/${version}
@@ -34,4 +34,4 @@ linux:
   executableName: easypixel
   category: Graphics
   target: [AppImage, deb]
-  maintainer: EasyPixel
+  maintainer: Alvaro Falcon

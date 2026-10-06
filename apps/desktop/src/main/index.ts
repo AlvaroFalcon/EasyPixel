@@ -1,12 +1,13 @@
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain, net, shell } from 'electron';
-import { IPC, type FileToWrite, type GodotProjectInfo, type OpenFileOptions, type SaveFileOptions } from '../shared/api';
+import { IPC, type FileToWrite, type GodotProjectInfo, type OpenFileOptions, type SaveFileOptions, type WindowState } from '../shared/api';
 import { MCP_DEFAULT_PORT, MCP_IPC } from '../shared/mcp';
 import { startMcpServer, type McpServerHandle } from './mcpServer';
 
 const APP_NAME = 'EasyPixel';
-const dirtyWindows = new WeakSet<BrowserWindow>();
+/** Windows with unsaved changes, with the confirmation texts in the UI language. */
+const dirtyWindows = new WeakMap<BrowserWindow, WindowState['quitPrompt']>();
 let mainWindow: BrowserWindow | null = null;
 let mcp: McpServerHandle | null = null;
 
@@ -75,15 +76,16 @@ function createWindow(): BrowserWindow {
   });
 
   win.on('close', (event) => {
-    if (!dirtyWindows.has(win)) return;
+    const prompt = dirtyWindows.get(win);
+    if (!prompt) return;
     const choice = dialog.showMessageBoxSync(win, {
       type: 'question',
-      buttons: ['Salir sin guardar', 'Cancelar'],
+      buttons: [prompt.discard, prompt.cancel],
       defaultId: 1,
       cancelId: 1,
       title: APP_NAME,
-      message: 'Hay cambios sin guardar.',
-      detail: '¿Seguro que quieres cerrar? Se perderán los cambios.',
+      message: prompt.message,
+      detail: prompt.detail,
     });
     if (choice === 1) event.preventDefault();
   });
@@ -160,10 +162,10 @@ function registerIpc(): void {
     return res.text();
   });
 
-  ipcMain.on(IPC.setWindowState, (event, state: { title: string; dirty: boolean }) => {
+  ipcMain.on(IPC.setWindowState, (event, state: WindowState) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win) return;
-    if (state.dirty) dirtyWindows.add(win);
+    if (state.dirty) dirtyWindows.set(win, state.quitPrompt);
     else dirtyWindows.delete(win);
     win.setTitle(`${state.dirty ? '• ' : ''}${state.title} — ${APP_NAME}`);
     win.setDocumentEdited(state.dirty);

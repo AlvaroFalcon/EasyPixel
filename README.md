@@ -6,8 +6,9 @@ and it exports straight to **Godot 4** (`SpriteFrames`, `AnimatedSprite2D` scene
 
 ![EasyPixel editor with an animated slime](docs/images/editor.png)
 
-> The user interface is currently in Spanish (all texts live in
-> [`strings.ts`](apps/desktop/src/renderer/src/strings.ts), ready to be translated).
+The interface is available in **English and Spanish** (*View → Language*); it follows your system
+language on first run. Texts live in [`apps/desktop/src/renderer/src/i18n`](apps/desktop/src/renderer/src/i18n),
+so adding a language is one file. Screenshots below show the Spanish UI.
 
 ## Download
 
@@ -220,3 +221,8 @@ previous one. That makes undo/redo trivial and works the same for edits made by 
 history records who made each change.
 
 See [`docs/PLAN.md`](docs/PLAN.md) for the original plan and phases (in Spanish).
+
+## License
+
+[MIT](LICENSE) © 2026 Alvaro Falcon. You are free to use, modify and distribute EasyPixel, including
+commercially, as long as the copyright and license notice are kept.
