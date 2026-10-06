@@ -86,6 +86,8 @@ export interface EditorState {
   shapeFilled: boolean;
 
   showGrid: boolean;
+  /** Tile grid size in sprite pixels (0 = hidden), for drawing tilesets. */
+  tileGrid: number;
   onionSkin: boolean;
   /** Frames shown before/after the current one when onion skin is on. */
   onionRange: number;
@@ -136,6 +138,7 @@ export const useEditor = create<EditorState>(() => ({
   fillContiguous: true,
   shapeFilled: false,
   showGrid: true,
+  tileGrid: 0,
   onionSkin: false,
   onionRange: 1,
   playing: false,

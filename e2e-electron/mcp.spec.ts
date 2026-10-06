@@ -115,3 +115,35 @@ test('exports to a Godot 4 project (validated with Godot when GODOT_BIN is set)'
   const out = execFileSync(godot!, ['--headless', '--path', project, '--quit-after', '600', '--script', 'check.gd'], { encoding: 'utf8', timeout: 60_000 });
   expect(out).toContain('CHECK ["idle"] 2 AnimatedSprite2D idle');
 });
+
+test('exports a Godot TileSet through MCP', async () => {
+  const project = mkdtempSync(join(tmpdir(), 'easypixel-tiles-'));
+  writeFileSync(join(project, 'project.godot'), 'config_version=5\n');
+  const dir = join(project, 'tiles');
+  const client = new Client({ name: 'test', version: '1.0.0' });
+  await client.connect(new StreamableHTTPClientTransport(new URL(URL_)));
+  const call = async (name: string, args: Record<string, unknown> = {}) => (await client.callTool({ name, arguments: args })) as Result;
+  await call('create_sprite', { name: 'ground', width: 32, height: 16, palette: 'pico-8' });
+  await call('draw_shape', { shape: 'rect', from: { x: 0, y: 0 }, to: { x: 7, y: 7 }, color: 3, filled: true });
+  await call('draw_pixels', { pixels: [{ x: 30, y: 12, color: 4 }] });
+  const r = await call('export_godot_tileset', { directory: dir, tile_width: 8, tile_height: 8 });
+  expect(textOf(r)).toContain('2 tile(s)');
+  expect(readFileSync(join(dir, 'ground_tileset.tres'), 'utf8')).toContain('0:0/0 = 0\n3:1/0 = 0');
+  await client.close();
+
+  const godot = process.env.GODOT_BIN;
+  test.skip(!godot, 'Set GODOT_BIN to validate the files with a real Godot 4');
+  writeFileSync(
+    join(project, 'check.gd'),
+    [
+      'extends SceneTree',
+      'func _init():',
+      '\tvar ts: TileSet = load("res://tiles/ground_tileset.tres")',
+      '\tprint("CHECK ", ts.tile_size, " ", ts.get_source(0).get_tiles_count())',
+      '\tquit()',
+    ].join('\n'),
+  );
+  execFileSync(godot!, ['--headless', '--path', project, '--import'], { stdio: 'ignore', timeout: 60_000 });
+  const out = execFileSync(godot!, ['--headless', '--path', project, '--quit-after', '600', '--script', 'check.gd'], { encoding: 'utf8', timeout: 60_000 });
+  expect(out).toContain('CHECK (8, 8) 2');
+});

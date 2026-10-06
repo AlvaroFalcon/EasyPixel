@@ -58,6 +58,8 @@ export interface EasyPixelApi {
   godotProject(dir: string): Promise<GodotProjectInfo | null>;
   /** Writes files into `dir` (created if needed). Resolves to the absolute paths written. */
   writeFiles(dir: string, files: FileToWrite[]): Promise<string[]>;
+  /** Downloads a lospec.com palette JSON (done in the main process, outside the page CSP). */
+  fetchLospec(url: string): Promise<string>;
   platform: string;
   openFile(options: OpenFileOptions): Promise<OpenedFile | null>;
   /** Resolves to the path written, or null when the dialog was cancelled. */
@@ -72,4 +74,5 @@ export const IPC = {
   pickDirectory: 'easypixel:pick-directory',
   godotProject: 'easypixel:godot-project',
   writeFiles: 'easypixel:write-files',
+  fetchLospec: 'easypixel:fetch-lospec',
 } as const;

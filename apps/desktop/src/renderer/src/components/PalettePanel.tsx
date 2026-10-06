@@ -14,6 +14,9 @@ import {
 } from '@easypixel/core';
 import { useEffect, useState, type ButtonHTMLAttributes } from 'react';
 import { openFile } from '../lib/platform';
+import { deletePalette, paletteColors, usePaletteLibrary } from '../lib/paletteLibrary';
+import { exportPalette, openDialog } from '../store/actions';
+import { Menu, type Entry } from './MenuBar';
 import { commit, notify, swapColors, useEditor } from '../store/editor';
 import { fmt, t } from '../strings';
 import { Icon } from './Icon';
@@ -103,8 +106,11 @@ export function PalettePanel() {
     setEditing(null);
   };
 
+  const library = usePaletteLibrary((s) => s.palettes);
+
   const applyPreset = (id: string) => {
-    const preset = PALETTE_PRESETS.find((p) => p.id === id);
+    const user = library.find((p) => p.id === id);
+    const preset = user ? { name: user.name, colors: paletteColors(user) } : PALETTE_PRESETS.find((p) => p.id === id);
     if (!preset || !window.confirm(fmt(t.palette.replaceConfirm, { name: preset.name }))) return;
     commit((d) => setPalette(d, preset.colors), t.palette.title);
   };
@@ -129,11 +135,22 @@ export function PalettePanel() {
         <h2>{t.palette.title}</h2>
         <select className="preset-select" value="" onChange={(e) => applyPreset(e.target.value)} title={t.palette.presets}>
           <option value="">{t.palette.presets}…</option>
-          {PALETTE_PRESETS.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name} ({p.colors.length})
-            </option>
-          ))}
+          <optgroup label={t.palette.builtIn}>
+            {PALETTE_PRESETS.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.colors.length})
+              </option>
+            ))}
+          </optgroup>
+          {library.length > 0 && (
+            <optgroup label={t.palette.mine}>
+              {library.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.colors.length})
+                </option>
+              ))}
+            </optgroup>
+          )}
         </select>
       </header>
 
@@ -183,9 +200,22 @@ export function PalettePanel() {
         >
           <Icon name="trash" />
         </button>
-        <button className="text-button" onClick={() => void importPalette()}>
-          {t.palette.importFile}
-        </button>
+        <span className="toolbar-spacer" />
+        <Menu
+          label="⋯"
+          title={t.palette.more}
+          align="right"
+          items={[
+            { label: t.palette.saveToLibrary, action: () => openDialog({ kind: 'palette-save' }) },
+            { label: t.palette.lospec, action: () => openDialog({ kind: 'lospec' }) },
+            'separator',
+            { label: t.palette.importFile, action: () => void importPalette() },
+            { label: t.palette.exportFile, action: () => void exportPalette() },
+            ...(library.length
+              ? (['separator', ...library.map((p) => ({ label: fmt(t.palette.deleteSaved, { name: p.name }), action: () => window.confirm(fmt(t.palette.deleteConfirm, { name: p.name })) && deletePalette(p.id) }))] as Entry[])
+              : []),
+          ]}
+        />
       </div>
     </section>
   );

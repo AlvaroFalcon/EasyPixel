@@ -46,6 +46,10 @@ export interface GodotExportSettings {
   spacing?: number;
   scale?: number;
   autoplay?: string;
+  /** "sprite" (default): spritesheet + SpriteFrames + scene. "tileset": canvas as a TileSet atlas. */
+  mode?: 'sprite' | 'tileset';
+  tileWidth?: number;
+  tileHeight?: number;
 }
 
 export interface SpriteDocument {

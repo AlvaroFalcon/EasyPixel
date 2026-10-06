@@ -405,6 +405,23 @@ const handlers: Handlers = {
     );
   },
 
+  async export_godot_tileset(args) {
+    const doc = present();
+    const dir = args.directory ?? doc.godot?.dir;
+    if (!dir) throw new Error('Pass `directory`: an absolute folder inside the Godot project.');
+    const settings = { dir, mode: 'tileset' as const, tileWidth: args.tile_width, tileHeight: args.tile_height };
+    const result = await exportToGodot(doc, settings);
+    if (JSON.stringify(settings) !== JSON.stringify(doc.godot)) edit('export_godot_tileset settings', (d) => setGodotSettings(d, settings));
+    useEditor.setState({ tileGrid: args.tile_width === args.tile_height ? args.tile_width : state().tileGrid });
+    return text(
+      [
+        `Exported a TileSet with ${result.tiles} tile(s) (${result.hframes}x${result.vframes} atlas) to ${result.resDir}:`,
+        ...result.written.map((p) => `- ${p}`),
+        'In Godot: add a TileMapLayer, set its tile_set to the .tres and paint.',
+      ].join('\n'),
+    );
+  },
+
   async save_sprite(args) {
     const s = state();
     const path = args.path ?? s.filePath;

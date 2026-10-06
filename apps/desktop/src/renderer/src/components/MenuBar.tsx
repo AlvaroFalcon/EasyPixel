@@ -1,5 +1,5 @@
 import { flipCel, clearCel } from '@easypixel/core';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { isElectron } from '../lib/platform';
 import { exportPalette, importPng, openDialog, openSprite, quickGodotExport, saveSprite } from '../store/actions';
 import {
@@ -17,6 +17,7 @@ import {
   undoAvailable,
   useEditor,
 } from '../store/editor';
+import { loadReference } from '../store/reference';
 import { fitToView, stepZoom } from '../store/view';
 import { fileNameOf } from '../lib/platform';
 import { t } from '../strings';
@@ -24,7 +25,7 @@ import { Icon } from './Icon';
 
 const mod = navigator.platform.toLowerCase().includes('mac') ? '⌘' : 'Ctrl+';
 
-interface Item {
+export interface Item {
   label: string;
   shortcut?: string;
   action: () => void;
@@ -32,9 +33,9 @@ interface Item {
   checked?: boolean;
 }
 
-type Entry = Item | 'separator';
+export type Entry = Item | 'separator';
 
-function Menu({ label, items }: { label: string; items: Entry[] }) {
+export function Menu({ label, items, align = 'left', title }: { label: ReactNode; items: Entry[]; align?: 'left' | 'right'; title?: string }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -47,11 +48,11 @@ function Menu({ label, items }: { label: string; items: Entry[] }) {
   }, [open]);
   return (
     <div className="menu" ref={ref}>
-      <button className={`menu-button ${open ? 'open' : ''}`} onClick={() => setOpen(!open)}>
+      <button className={`menu-button ${open ? 'open' : ''}`} onClick={() => setOpen(!open)} title={title} type="button">
         {label}
       </button>
       {open && (
-        <div className="menu-popup" role="menu">
+        <div className={`menu-popup ${align}`} role="menu">
           {items.map((item, i) =>
             item === 'separator' ? (
               <div key={i} className="menu-separator" />
@@ -90,6 +91,7 @@ export function MenuBar() {
   const hasClipboard = useEditor((s) => !!s.clipboard);
   const showGrid = useEditor((s) => s.showGrid);
   const hasGodot = useEditor((s) => !!s.history.present.doc.godot);
+  const tileGrid = useEditor((s) => s.tileGrid);
   const dirty = useEditor(isDirty);
   const name = useEditor((s) => (s.filePath ? fileNameOf(s.filePath) : `${s.doc.name} (${t.untitled})`));
 
@@ -127,10 +129,17 @@ export function MenuBar() {
   ];
   const view: Entry[] = [
     { label: t.menu.toggleGrid, shortcut: `${mod}G`, checked: showGrid, action: () => useEditor.setState({ showGrid: !showGrid }) },
+    ...[0, 8, 16, 32].map((n) => ({
+      label: `${t.menu.tileGrid}: ${n ? `${n}×${n}` : t.menu.tileGridOff}`,
+      checked: tileGrid === n,
+      action: () => useEditor.setState({ tileGrid: n }),
+    })),
     'separator',
     { label: t.menu.zoomIn, shortcut: '+', action: () => stepZoom(1) },
     { label: t.menu.zoomOut, shortcut: '-', action: () => stepZoom(-1) },
     { label: t.menu.zoomFit, shortcut: '0', action: fitToView },
+    'separator',
+    { label: t.reference.load, action: () => void loadReference() },
   ];
 
   return (

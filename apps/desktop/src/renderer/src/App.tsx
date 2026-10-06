@@ -6,6 +6,7 @@ import { LayersPanel } from './components/LayersPanel';
 import { MenuBar } from './components/MenuBar';
 import { PalettePanel } from './components/PalettePanel';
 import { PreviewPanel } from './components/PreviewPanel';
+import { ReferencePanel } from './components/ReferencePanel';
 import { StatusBar } from './components/StatusBar';
 import { TabBar } from './components/TabBar';
 import { Toolbar, ToolOptions } from './components/Toolbar';
@@ -38,6 +39,7 @@ export function App() {
           <PreviewPanel />
           <PalettePanel />
           <LayersPanel />
+          <ReferencePanel />
         </aside>
       </div>
       <FramesPanel />

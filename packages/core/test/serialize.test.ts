@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   addFrame, addTag, celKey, createDocument, decodeBase64, documentFromJson, documentToJson,
-  encodeBase64, parseGplPalette, parseHexPalette, serializeGplPalette, setPixels,
+  encodeBase64, lospecJsonUrl, parseGplPalette, parseHexPalette, parseLospecJson, serializeGplPalette, setPixels,
 } from '../src';
 
 describe('serialization', () => {
@@ -38,6 +38,23 @@ describe('serialization', () => {
       expect(Array.from(decodeBase64(encodeBase64(bytes)))).toEqual(Array.from(bytes));
     }
     expect(encodeBase64(new Uint8Array([104, 105]))).toBe('aGk=');
+  });
+});
+
+describe('lospec', () => {
+  it('builds JSON URLs from slugs, names and URLs', () => {
+    expect(lospecJsonUrl('endesga-32')).toBe('https://lospec.com/palette-list/endesga-32.json');
+    expect(lospecJsonUrl('  Endesga 32 ')).toBe('https://lospec.com/palette-list/endesga-32.json');
+    expect(lospecJsonUrl('https://lospec.com/palette-list/resurrect-64')).toBe('https://lospec.com/palette-list/resurrect-64.json');
+    expect(() => lospecJsonUrl('  ')).toThrow();
+  });
+
+  it('parses palette JSON', () => {
+    const p = parseLospecJson('{"name":"Twilight 5","author":"Star","colors":["fbbbad","ee8695","4a7a96","333f58","292831"]}');
+    expect(p.name).toBe('Twilight 5');
+    expect(p.colors).toEqual([0xfbbbadff, 0xee8695ff, 0x4a7a96ff, 0x333f58ff, 0x292831ff]);
+    expect(() => parseLospecJson('<html>')).toThrow(/did not return/);
+    expect(() => parseLospecJson('{"colors":[]}')).toThrow(/no colors/);
   });
 });
 

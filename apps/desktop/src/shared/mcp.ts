@@ -307,6 +307,20 @@ export const TOOLS = {
       autoplay: z.string().optional().describe('Animation the scene plays on start. Default "idle" or the first one.'),
     },
   },
+  export_godot_tileset: {
+    title: 'Export Godot TileSet',
+    description: [
+      'Exports the canvas (first frame, visible layers) as a Godot 4 TileSet: <name>.png atlas + <name>_tileset.tres with one TileSetAtlasSource;',
+      'only non-empty tile cells are registered. Draw tilesets on a canvas whose size is a multiple of the tile size (e.g. 128x128 with 16x16 tiles).',
+      '`directory` must be an absolute folder inside a Godot project.',
+    ].join(' '),
+    input: {
+      sprite_id: spriteId,
+      directory: z.string().optional().describe('Default: the folder remembered from the previous Godot export.'),
+      tile_width: z.number().int().min(1),
+      tile_height: z.number().int().min(1),
+    },
+  },
   save_sprite: {
     title: 'Save sprite',
     description:

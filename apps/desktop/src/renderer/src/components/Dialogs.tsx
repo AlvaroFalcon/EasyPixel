@@ -10,7 +10,11 @@ import {
   removeTag,
   resizeCanvas,
   setGodotSettings,
+  setPalette,
   snakeName,
+  toCss,
+  toHex,
+  type Color,
   type GodotExportSettings,
   updateTag,
   sliceSpritesheet,
@@ -20,6 +24,7 @@ import {
 } from '@easypixel/core';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { regionToCanvas } from '../lib/image';
+import { fetchLospecPalette, savePalette } from '../lib/paletteLibrary';
 import { claudeCodeCommand, claudeDesktopConfig, useMcp } from '../mcp/connection';
 import { closeDialog, exportImage, exportPng, newDocument, runGodotExport, useDialog, type ExportOptions } from '../store/actions';
 import { godotProject, isElectron, pickDirectory } from '../lib/platform';
@@ -293,10 +298,17 @@ function ImportDialog({ image, fileName }: { image: PixelRegion; fileName: strin
 function ExportDialog() {
   const doc = useEditor((s) => s.history.present.doc);
   const frameIndex = useEditor((s) => s.frameIndex);
-  const [opts, setOpts] = useState<ExportOptions>({ mode: doc.frames.length > 1 ? 'sheet' : 'frame', columns: doc.frames.length, spacing: 0, scale: 1 });
+  const activeTagId = useEditor((s) => s.activeTagId);
+  const [opts, setOpts] = useState<ExportOptions>({
+    mode: doc.frames.length > 1 ? 'sheet' : 'frame',
+    columns: doc.frames.length,
+    spacing: 0,
+    scale: 1,
+    tagId: activeTagId,
+  });
   const update = (patch: Partial<ExportOptions>) => setOpts((o) => ({ ...o, ...patch }));
   const layout = layoutSpritesheet(doc, {
-    frames: opts.mode === 'frame' ? [frameIndex] : undefined,
+    frames: opts.mode === 'sheet' ? undefined : [frameIndex],
     columns: opts.columns,
     spacing: opts.spacing,
   });
@@ -322,6 +334,23 @@ function ExportDialog() {
             <input type="radio" checked={opts.mode === 'sheet'} onChange={() => update({ mode: 'sheet' })} />
             <strong>{t.dialogs.exportSheet}</strong>
           </label>
+          <label className="radio">
+            <input type="radio" checked={opts.mode === 'gif'} onChange={() => update({ mode: 'gif' })} data-testid="export-gif" />
+            <strong>{t.dialogs.exportGif}</strong>
+          </label>
+          {opts.mode === 'gif' && (
+            <label className="field indent">
+              {t.animation.title}
+              <select value={opts.tagId ?? ''} onChange={(e) => update({ tagId: e.target.value || null })}>
+                <option value="">{t.animation.allFrames}</option>
+                {doc.tags.map((tag) => (
+                  <option key={tag.id} value={tag.id}>
+                    {tag.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {opts.mode === 'sheet' && (
             <div className="field-row indent">
               <label>
@@ -453,6 +482,9 @@ function GodotDialog() {
   const [spacing, setSpacing] = useState(saved?.spacing ?? 0);
   const [scale, setScale] = useState(saved?.scale ?? 1);
   const [autoplay, setAutoplay] = useState(saved?.autoplay ?? (doc.tags.find((tag) => tag.name === 'idle') ?? doc.tags[0])?.name ?? '');
+  const [mode, setMode] = useState<'sprite' | 'tileset'>(saved?.mode ?? 'sprite');
+  const [tileW, setTileW] = useState(saved?.tileWidth ?? useEditor.getState().tileGrid ?? 16);
+  const [tileH, setTileH] = useState(saved?.tileHeight ?? useEditor.getState().tileGrid ?? 16);
   const [remember, setRemember] = useState(true);
   const [project, setProject] = useState<GodotProjectInfo | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);
@@ -473,7 +505,8 @@ function GodotDialog() {
   const cols = Math.max(1, Math.min(columns || 1, n));
   const rows = Math.ceil(n / cols);
   const base = snakeName(doc.name);
-  const valid = !busy && (isElectron ? !!dir && !!project : true);
+  const tileFits = tileW >= 1 && tileH >= 1 && doc.width % tileW === 0 && doc.height % tileH === 0;
+  const valid = !busy && (isElectron ? !!dir && !!project : true) && (mode === 'sprite' || tileFits);
 
   return (
     <Modal
@@ -481,13 +514,16 @@ function GodotDialog() {
       submitLabel={t.dialogs.export}
       valid={valid}
       onSubmit={() => {
-        const settings: GodotExportSettings = {
-          dir: isElectron ? dir : 'res://',
-          columns: cols,
-          spacing,
-          scale,
-          ...(autoplay ? { autoplay } : {}),
-        };
+        const settings: GodotExportSettings =
+          mode === 'tileset'
+            ? { dir: isElectron ? dir : 'res://', mode, tileWidth: tileW, tileHeight: tileH }
+            : {
+                dir: isElectron ? dir : 'res://',
+                columns: cols,
+                spacing,
+                scale,
+                ...(autoplay ? { autoplay } : {}),
+              };
         if (remember && isElectron && JSON.stringify(settings) !== JSON.stringify(saved)) {
           commit((d) => setGodotSettings(d, settings), t.godot.menuExport);
         }
@@ -498,6 +534,14 @@ function GodotDialog() {
         });
       }}
     >
+      <div className="segmented wide">
+        <button type="button" className={mode === 'sprite' ? 'active' : ''} onClick={() => setMode('sprite')}>
+          {t.godot.modeSprite}
+        </button>
+        <button type="button" className={mode === 'tileset' ? 'active' : ''} onClick={() => setMode('tileset')} data-testid="godot-tileset">
+          {t.godot.modeTileset}
+        </button>
+      </div>
       {isElectron ? (
         <div className="field">
           {t.godot.folder}
@@ -520,6 +564,8 @@ function GodotDialog() {
       ) : (
         <p className="muted">{t.godot.browserNote}</p>
       )}
+      {mode === 'sprite' ? (
+        <>
       <div className="field-row">
         <label>
           {t.godot.columns}
@@ -579,11 +625,137 @@ function GodotDialog() {
         </ul>
         {doc.tags.some((tag) => tag.direction !== 'forward') && <small className="muted">{t.godot.pingpongHint}</small>}
       </div>
+        </>
+      ) : (
+        <>
+      <div className="field-row">
+        <label>
+          {t.godot.tileWidth}
+          <input type="number" min={1} value={tileW} onChange={(e) => setTileW(Number(e.target.value))} data-testid="tile-w" />
+        </label>
+        <label>
+          {t.godot.tileHeight}
+          <input type="number" min={1} value={tileH} onChange={(e) => setTileH(Number(e.target.value))} />
+        </label>
+      </div>
+      {!tileFits && <p className="error-text">{fmt(t.godot.tileMismatch, { w: doc.width, h: doc.height })}</p>}
+      <div className="field">
+        {t.godot.files}
+        <ul className="file-list">
+          <li>
+            <span className="mono">{base}.png</span> — {fmt(t.godot.tilesPngHint, { w: doc.width, h: doc.height })}
+          </li>
+          <li>
+            <span className="mono">{base}_tileset.tres</span> —{' '}
+            {fmt(t.godot.tilesetHint, { c: tileFits ? doc.width / tileW : '?', r: tileFits ? doc.height / tileH : '?' })}
+          </li>
+        </ul>
+        <small className="muted">{t.godot.tilesetUsage}</small>
+      </div>
+        </>
+      )}
       {isElectron && (
         <label className="option">
           <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
           {t.godot.remember}
         </label>
+      )}
+    </Modal>
+  );
+}
+
+function SavePaletteDialog() {
+  const palette = useEditor((s) => s.doc.palette);
+  const docName = useEditor((s) => s.doc.name);
+  const [name, setName] = useState(docName);
+  return (
+    <Modal
+      title={t.palette.saveTitle}
+      valid={name.trim() !== '' && palette.length > 0}
+      onSubmit={() => {
+        savePalette(name.trim(), palette);
+        notify(fmt(t.palette.saved, { name: name.trim() }));
+        closeDialog();
+      }}
+    >
+      <label className="field">
+        {t.dialogs.name}
+        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} data-testid="palette-name" />
+      </label>
+      <PaletteStrip colors={palette} />
+    </Modal>
+  );
+}
+
+function PaletteStrip({ colors }: { colors: Color[] }) {
+  return (
+    <div className="palette-strip">
+      {colors.map((c, i) => (
+        <span key={i} style={{ background: toCss(c) }} title={toHex(c)} />
+      ))}
+    </div>
+  );
+}
+
+function LospecDialog() {
+  const [query, setQuery] = useState('');
+  const [result, setResult] = useState<{ name: string; colors: Color[] } | null>(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [save, setSave] = useState(true);
+  const search = () => {
+    setLoading(true);
+    setError('');
+    fetchLospecPalette(query)
+      .then(setResult)
+      .catch((e: Error) => {
+        setResult(null);
+        setError(e.message);
+      })
+      .finally(() => setLoading(false));
+  };
+  return (
+    <Modal
+      title={t.palette.lospecTitle}
+      submitLabel={t.palette.lospecApply}
+      valid={!!result}
+      onSubmit={() => {
+        if (!result) return;
+        commit((d) => setPalette(d, result.colors), t.palette.title);
+        if (save) savePalette(result.name, result.colors);
+        closeDialog();
+      }}
+    >
+      <p className="muted">{t.palette.lospecHint}</p>
+      <div className="field-row">
+        <input
+          autoFocus
+          value={query}
+          placeholder="resurrect-64"
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              search();
+            }
+          }}
+        />
+        <button type="button" disabled={!query.trim() || loading} onClick={search}>
+          {loading ? '…' : t.palette.lospecSearch}
+        </button>
+      </div>
+      {error && <p className="error-text">{error}</p>}
+      {result && (
+        <>
+          <strong>
+            {result.name} ({result.colors.length})
+          </strong>
+          <PaletteStrip colors={result.colors} />
+          <label className="option">
+            <input type="checkbox" checked={save} onChange={(e) => setSave(e.target.checked)} />
+            {t.palette.lospecSave}
+          </label>
+        </>
       )}
     </Modal>
   );
@@ -658,5 +830,9 @@ export function Dialogs() {
       return <McpDialog />;
     case 'godot':
       return <GodotDialog />;
+    case 'palette-save':
+      return <SavePaletteDialog />;
+    case 'lospec':
+      return <LospecDialog />;
   }
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { frameCanvas, tintedFrameCanvas } from '../lib/frameCache';
+import { activeReference, referenceRect, useReference } from '../store/reference';
 import { useEditor, type EditorState } from '../store/editor';
 import { pointerDown, pointerMove, pointerUp } from '../store/tools';
 import { fitToView, stepZoom, viewport } from '../store/view';
@@ -62,9 +63,25 @@ function draw(canvas: HTMLCanvasElement, s: EditorState, checker: CanvasPattern)
   ctx.fillRect(0, 0, w, h);
   ctx.restore();
 
+  const ref = activeReference();
+  const drawReference = () => {
+    if (!ref?.visible) return;
+    const r = referenceRect(ref, doc.width, doc.height);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(pan.x, pan.y, w, h);
+    ctx.clip();
+    ctx.globalAlpha = ref.opacity;
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(ref.canvas, pan.x + r.x * zoom, pan.y + r.y * zoom, r.w * zoom, r.h * zoom);
+    ctx.restore();
+  };
+  if (ref && !ref.above) drawReference();
+
   ctx.imageSmoothingEnabled = false;
   if (s.onionSkin) drawOnionSkin(ctx, s, w, h);
   ctx.drawImage(frameCanvas(doc, s.frameIndex), pan.x, pan.y, w, h);
+  if (ref?.above) drawReference();
 
   const px = 1 / dpr;
   // Pixel grid
@@ -82,6 +99,24 @@ function draw(canvas: HTMLCanvasElement, s: EditorState, checker: CanvasPattern)
     }
     ctx.strokeStyle = 'rgba(40, 40, 60, 0.18)';
     ctx.lineWidth = px;
+    ctx.stroke();
+  }
+
+  // Tile grid (stronger lines every N pixels)
+  if (s.tileGrid > 0 && s.tileGrid * zoom >= 4) {
+    ctx.beginPath();
+    for (let x = s.tileGrid; x < doc.width; x += s.tileGrid) {
+      const gx = Math.round((pan.x + x * zoom) * dpr) / dpr + px / 2;
+      ctx.moveTo(gx, pan.y);
+      ctx.lineTo(gx, pan.y + h);
+    }
+    for (let y = s.tileGrid; y < doc.height; y += s.tileGrid) {
+      const gy = Math.round((pan.y + y * zoom) * dpr) / dpr + px / 2;
+      ctx.moveTo(pan.x, gy);
+      ctx.lineTo(pan.x + w, gy);
+    }
+    ctx.strokeStyle = 'rgba(95, 211, 255, 0.75)';
+    ctx.lineWidth = Math.max(px, 1);
     ctx.stroke();
   }
 
@@ -176,8 +211,10 @@ export function CanvasView() {
     ro.observe(wrap);
     resize();
     const unsubscribe = useEditor.subscribe(schedule);
+    const unsubscribeRef = useReference.subscribe(schedule);
     return () => {
       unsubscribe();
+      unsubscribeRef();
       ro.disconnect();
       if (raf) cancelAnimationFrame(raf);
     };

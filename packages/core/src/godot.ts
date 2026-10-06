@@ -6,9 +6,11 @@
  * Text formats follow Godot 4's text resource syntax (format=3).
  */
 import { tagFrameSequence } from './animation';
+import { compositeFrame } from './composite';
+import { isCelEmpty } from './pixels';
 import type { SpriteDocument } from './document';
-import type { PixelRegion } from './pixels';
 import { layoutSpritesheet, renderSpritesheet, scaleRegion, type SheetLayout } from './spritesheet';
+import type { PixelRegion } from './pixels';
 
 export interface GodotExportOptions {
   /** Godot path of the folder the files go to, e.g. "res://sprites/knight". */
@@ -167,5 +169,78 @@ export function exportGodot(doc: SpriteDocument, opts: GodotExportOptions): Godo
       { name: tresName, text: lines.join('\n') },
       { name: sceneName, text: scene.join('\n') },
     ],
+  };
+}
+
+export interface GodotTilesetOptions {
+  resDir: string;
+  baseName?: string;
+  tileWidth: number;
+  tileHeight: number;
+  /** Frame whose (flattened) canvas holds the tiles. Default 0. */
+  frame?: number;
+}
+
+export interface GodotTilesetExport {
+  pngName: string;
+  image: PixelRegion;
+  /** Atlas coordinates of the non-empty tiles registered in the TileSet. */
+  tiles: { x: number; y: number }[];
+  columns: number;
+  rows: number;
+  files: { name: string; text: string }[];
+}
+
+/**
+ * Godot 4 TileSet: the canvas (one frame, all visible layers) is the atlas
+ * texture, cut in tileWidth x tileHeight cells; only non-empty cells become
+ * tiles. Paint them with a TileMapLayer.
+ */
+export function exportGodotTileset(doc: SpriteDocument, opts: GodotTilesetOptions): GodotTilesetExport {
+  const { tileWidth: tw, tileHeight: th } = opts;
+  if (!Number.isInteger(tw) || !Number.isInteger(th) || tw < 1 || th < 1) throw new Error('Tile size must be a positive integer');
+  if (doc.width % tw !== 0 || doc.height % th !== 0) {
+    throw new Error(`The canvas (${doc.width}x${doc.height}) must be a multiple of the tile size (${tw}x${th})`);
+  }
+  const frame = opts.frame ?? 0;
+  if (!doc.frames[frame]) throw new Error(`Frame index out of range: ${frame}`);
+  const data = compositeFrame(doc, frame);
+  const columns = doc.width / tw;
+  const rows = doc.height / th;
+  const tiles: { x: number; y: number }[] = [];
+  for (let ty = 0; ty < rows; ty++) {
+    for (let tx = 0; tx < columns; tx++) {
+      const cell = new Uint8ClampedArray(tw * th * 4);
+      for (let y = 0; y < th; y++) {
+        const src = ((ty * th + y) * doc.width + tx * tw) * 4;
+        cell.set(data.subarray(src, src + tw * 4), y * tw * 4);
+      }
+      if (!isCelEmpty(cell)) tiles.push({ x: tx, y: ty });
+    }
+  }
+  const baseName = snakeName(opts.baseName ?? doc.name);
+  const pngName = `${baseName}.png`;
+  const text = [
+    '[gd_resource type="TileSet" load_steps=3 format=3]',
+    '',
+    `[ext_resource type="Texture2D" path=${godotString(joinRes(opts.resDir, pngName))} id="1_atlas"]`,
+    '',
+    '[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_1"]',
+    'texture = ExtResource("1_atlas")',
+    `texture_region_size = Vector2i(${tw}, ${th})`,
+    ...tiles.map((t) => `${t.x}:${t.y}/0 = 0`),
+    '',
+    '[resource]',
+    `tile_size = Vector2i(${tw}, ${th})`,
+    'sources/0 = SubResource("TileSetAtlasSource_1")',
+    '',
+  ].join('\n');
+  return {
+    pngName,
+    image: { width: doc.width, height: doc.height, data },
+    tiles,
+    columns,
+    rows,
+    files: [{ name: `${baseName}_tileset.tres`, text }],
   };
 }

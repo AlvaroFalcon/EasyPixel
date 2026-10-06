@@ -16,6 +16,7 @@ const api: EasyPixelApi = {
   pickDirectory: (title) => ipcRenderer.invoke(IPC.pickDirectory, title),
   godotProject: (dir) => ipcRenderer.invoke(IPC.godotProject, dir),
   writeFiles: (dir, files) => ipcRenderer.invoke(IPC.writeFiles, dir, files),
+  fetchLospec: (url) => ipcRenderer.invoke(IPC.fetchLospec, url),
   mcp: {
     getStatus: () => ipcRenderer.invoke(MCP_IPC.info),
     onStatus: (cb) => subscribe<McpStatus>(MCP_IPC.status, cb),

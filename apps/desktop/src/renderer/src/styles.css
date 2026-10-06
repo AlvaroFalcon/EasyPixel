@@ -1031,3 +1031,47 @@ button.danger {
 .field-row input:not([type]) {
   flex: 1;
 }
+.panel-actions.inline {
+  margin: 0;
+}
+.reference-name {
+  margin: 0 0 6px;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.slider-row {
+  width: 100%;
+  margin-bottom: 4px;
+}
+.slider-row input[type='range'] {
+  flex: 1;
+}
+.menu-popup.right {
+  left: auto;
+  right: 0;
+}
+.palette-panel .menu-button {
+  padding: 2px 10px;
+  font-weight: 700;
+}
+.palette-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.palette-strip span {
+  width: 18px;
+  height: 18px;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+}
+.segmented.wide {
+  display: flex;
+}
+.segmented.wide button {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 13px;
+}

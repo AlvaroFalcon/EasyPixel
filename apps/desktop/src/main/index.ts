@@ -1,6 +1,6 @@
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, net, shell } from 'electron';
 import { IPC, type FileToWrite, type GodotProjectInfo, type OpenFileOptions, type SaveFileOptions } from '../shared/api';
 import { MCP_DEFAULT_PORT, MCP_IPC } from '../shared/mcp';
 import { startMcpServer, type McpServerHandle } from './mcpServer';
@@ -128,6 +128,14 @@ function registerIpc(): void {
       written.push(path);
     }
     return written;
+  });
+
+  ipcMain.handle(IPC.fetchLospec, async (_event, url: string) => {
+    // Only Lospec palette JSON: the renderer cannot use this to reach arbitrary hosts.
+    if (!/^https:\/\/lospec\.com\/palette-list\/[a-z0-9-]+\.json$/.test(url)) throw new Error(`Not a Lospec palette URL: ${url}`);
+    const res = await net.fetch(url);
+    if (!res.ok) throw new Error(res.status === 404 ? 'Palette not found on Lospec' : `Lospec answered ${res.status}`);
+    return res.text();
   });
 
   ipcMain.on(IPC.setWindowState, (event, state: { title: string; dirty: boolean }) => {

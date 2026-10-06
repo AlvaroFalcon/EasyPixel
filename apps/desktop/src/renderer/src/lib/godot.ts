@@ -1,4 +1,4 @@
-import { exportGodot, type GodotExportSettings, type SpriteDocument } from '@easypixel/core';
+import { exportGodot, exportGodotTileset, type GodotExportSettings, type SpriteDocument } from '@easypixel/core';
 import { encodePng } from './image';
 import { godotProject, isElectron, writeFiles } from './platform';
 
@@ -9,6 +9,8 @@ export interface GodotExportResult {
   hframes: number;
   vframes: number;
   animations: string[];
+  /** TileSet mode: number of tiles registered. */
+  tiles?: number;
 }
 
 export class NotAGodotProjectError extends Error {
@@ -29,6 +31,14 @@ export async function exportToGodot(doc: SpriteDocument, settings: GodotExportSe
     const project = await godotProject(settings.dir);
     if (!project) throw new NotAGodotProjectError(settings.dir);
     resDir = project.resDir;
+  }
+  if (settings.mode === 'tileset') {
+    const out = exportGodotTileset(doc, { resDir, tileWidth: settings.tileWidth ?? 16, tileHeight: settings.tileHeight ?? 16 });
+    const written = await writeFiles(settings.dir, [
+      { name: out.pngName, data: await encodePng(out.image) },
+      ...out.files.map((f) => ({ name: f.name, data: f.text })),
+    ]);
+    return { written, resDir, hframes: out.columns, vframes: out.rows, animations: [], tiles: out.tiles.length };
   }
   const out = exportGodot(doc, {
     resDir,

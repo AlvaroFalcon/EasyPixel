@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  addFrame, addTag, createDocument, exportGodot, godotFloat, godotTiming, setFrameDuration, snakeName,
+  addFrame, addTag, createDocument, exportGodot, exportGodotTileset, setPixels, godotFloat, godotTiming, setFrameDuration, snakeName,
 } from '../src';
 
 function knight() {
@@ -58,5 +58,23 @@ describe('godot export', () => {
     expect(out.animations).toEqual([{ name: 'default', frames: [0, 1], durations: [1, 1], speed: 10, loop: true }]);
     expect(out.files[0].text).toContain('path="res://coin.png"');
     expect(out.files[1].text).toContain('autoplay = "default"');
+  });
+});
+
+describe('godot tileset export', () => {
+  it('registers only non-empty tiles', () => {
+    let d = createDocument({ name: 'Dungeon Tiles', width: 32, height: 16 });
+    d = setPixels(d, d.layers[0].id, d.frames[0].id, [{ x: 0, y: 0, color: 0xffffffff }, { x: 31, y: 15, color: 0xffffffff }]);
+    const out = exportGodotTileset(d, { resDir: 'res://tiles', tileWidth: 8, tileHeight: 8 });
+    expect(out).toMatchObject({ columns: 4, rows: 2, tiles: [{ x: 0, y: 0 }, { x: 3, y: 1 }], pngName: 'dungeon_tiles.png' });
+    const tres = out.files[0];
+    expect(tres.name).toBe('dungeon_tiles_tileset.tres');
+    expect(tres.text).toContain('[ext_resource type="Texture2D" path="res://tiles/dungeon_tiles.png" id="1_atlas"]');
+    expect(tres.text).toContain('texture_region_size = Vector2i(8, 8)\n0:0/0 = 0\n3:1/0 = 0\n');
+    expect(tres.text).toContain('tile_size = Vector2i(8, 8)');
+  });
+
+  it('rejects canvas sizes that are not a multiple of the tile size', () => {
+    expect(() => exportGodotTileset(createDocument({ width: 20, height: 16 }), { resDir: 'res://', tileWidth: 16, tileHeight: 16 })).toThrow(/multiple/);
   });
 });

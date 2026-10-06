@@ -80,3 +80,34 @@ export function serializeGplPalette(colors: Color[], name = 'EasyPixel'): string
   }
   return lines.join('\n') + '\n';
 }
+
+/**
+ * Lospec palette URLs: accepts a slug ("endesga-32"), a palette name
+ * ("Endesga 32") or a lospec.com palette URL, and returns its JSON endpoint.
+ */
+export function lospecJsonUrl(input: string): string {
+  const trimmed = input.trim();
+  const fromUrl = /lospec\.com\/palette-list\/([a-z0-9-]+)/i.exec(trimmed);
+  const slug = (fromUrl ? fromUrl[1] : trimmed)
+    .toLowerCase()
+    .replace(/\.json$/, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  if (!slug) throw new Error('Write a Lospec palette name or URL, e.g. "endesga-32"');
+  return `https://lospec.com/palette-list/${slug}.json`;
+}
+
+/** Parses Lospec's palette JSON: { "name": "...", "colors": ["rrggbb", ...] }. */
+export function parseLospecJson(text: string): { name: string; colors: Color[] } {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    throw new Error('Lospec did not return a palette (is the name right?)');
+  }
+  const data = raw as { name?: unknown; colors?: unknown };
+  if (!Array.isArray(data.colors) || data.colors.length === 0) throw new Error('The Lospec palette has no colors');
+  const colors = data.colors.map((c) => tryParseHex(String(c))).filter((c): c is Color => c !== null);
+  if (colors.length === 0) throw new Error('The Lospec palette has no valid colors');
+  return { name: typeof data.name === 'string' && data.name ? data.name : 'Lospec palette', colors };
+}

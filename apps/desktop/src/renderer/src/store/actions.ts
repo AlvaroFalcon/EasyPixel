@@ -1,5 +1,6 @@
 import {
   documentFromJson,
+  documentToGif,
   documentToJson,
   FILE_EXTENSION,
   layoutSpritesheet,
@@ -26,6 +27,8 @@ export type DialogState =
   | { kind: 'tag'; tagId?: string }
   | { kind: 'mcp' }
   | { kind: 'godot' }
+  | { kind: 'palette-save' }
+  | { kind: 'lospec' }
   | null;
 
 export const useDialog = create<{ dialog: DialogState }>(() => ({ dialog: null }));
@@ -101,15 +104,19 @@ export async function importPng(): Promise<void> {
 }
 
 export interface ExportOptions {
-  mode: 'frame' | 'sheet';
+  mode: 'frame' | 'sheet' | 'gif';
+  /** For GIFs: animation to play (null = all frames). */
+  tagId?: string | null;
   columns: number;
   spacing: number;
   scale: number;
 }
 
 export function exportImage(doc: SpriteDocument, frameIndex: number, opts: ExportOptions): PixelRegion {
+  const tag = opts.mode === 'gif' ? doc.tags.find((x) => x.id === opts.tagId) : undefined;
+  const single = opts.mode === 'frame' ? frameIndex : opts.mode === 'gif' ? (tag?.from ?? 0) : null;
   const layout = layoutSpritesheet(doc, {
-    frames: opts.mode === 'frame' ? [frameIndex] : undefined,
+    frames: single !== null ? [single] : undefined,
     columns: opts.columns,
     spacing: opts.spacing,
   });
@@ -121,14 +128,25 @@ export async function exportPng(opts: ExportOptions): Promise<void> {
   const { history, frameIndex } = useEditor.getState();
   const doc = history.present.doc;
   try {
-    const bytes = await encodePng(exportImage(doc, frameIndex, opts));
-    const suffix = opts.mode === 'frame' ? `_${frameIndex + 1}` : '_sheet';
-    const path = await saveFile({
-      title: t.menu.exportPng,
-      defaultName: `${doc.name}${suffix}.png`,
-      filters: PNG_FILTERS,
-      data: bytes,
-    });
+    let path: string | null;
+    if (opts.mode === 'gif') {
+      const tag = doc.tags.find((x) => x.id === opts.tagId) ?? null;
+      path = await saveFile({
+        title: t.menu.exportPng,
+        defaultName: `${doc.name}${tag ? `_${tag.name}` : ''}.gif`,
+        filters: [{ name: 'GIF', extensions: ['gif'] }],
+        data: documentToGif(doc, tag, opts.scale),
+      });
+    } else {
+      const bytes = await encodePng(exportImage(doc, frameIndex, opts));
+      const suffix = opts.mode === 'frame' ? `_${frameIndex + 1}` : '_sheet';
+      path = await saveFile({
+        title: t.menu.exportPng,
+        defaultName: `${doc.name}${suffix}.png`,
+        filters: PNG_FILTERS,
+        data: bytes,
+      });
+    }
     if (path) notify(fmt(t.status.exported, { path }));
   } catch (e) {
     notify((e as Error).message, 'error');
@@ -151,7 +169,11 @@ export async function runGodotExport(settings: GodotExportSettings): Promise<boo
   settleFloating();
   try {
     const result = await exportToGodot(useEditor.getState().history.present.doc, settings);
-    notify(fmt(t.godot.exported, { res: result.resDir, n: result.written.length }));
+    notify(
+      result.tiles !== undefined
+        ? fmt(t.godot.exportedTiles, { res: result.resDir, n: result.tiles })
+        : fmt(t.godot.exported, { res: result.resDir, n: result.written.length }),
+    );
     return true;
   } catch (e) {
     notify((e as Error).message, 'error');
