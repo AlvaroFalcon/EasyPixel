@@ -290,6 +290,23 @@ export const TOOLS = {
     description: 'Undoes the last editor change(s) — the user can also undo with Ctrl+Z.',
     input: { sprite_id: spriteId, steps: z.number().int().min(1).max(50).optional() },
   },
+  export_godot: {
+    title: 'Export to Godot',
+    description: [
+      'Exports the sprite to a Godot 4 project: <name>.png (grid spritesheet), <name>.tres (SpriteFrames with one animation per EasyPixel animation, timings preserved, reverse/pingpong expanded)',
+      'and <name>.tscn (AnimatedSprite2D with nearest filtering and autoplay, ready to instance).',
+      '`directory` must be an absolute folder inside a Godot project (project.godot in it or a parent); it is created if missing.',
+      'Without `directory`, the folder remembered from the previous export is used.',
+    ].join(' '),
+    input: {
+      sprite_id: spriteId,
+      directory: z.string().optional(),
+      columns: z.number().int().min(1).optional().describe('Frames per row in the sheet. Default: all frames in one row (max 16).'),
+      spacing: z.number().int().min(0).optional(),
+      scale: z.number().int().min(1).max(8).optional().describe('Default 1 (recommended: scale in Godot instead).'),
+      autoplay: z.string().optional().describe('Animation the scene plays on start. Default "idle" or the first one.'),
+    },
+  },
   save_sprite: {
     title: 'Save sprite',
     description:
@@ -319,6 +336,7 @@ Workflow
 4. ALWAYS call get_frame_image after drawing and fix problems you see before moving on.
 5. For animations: add_frame with duplicate=true, then modify the copy; keep the silhouette consistent; create_animation with Godot-friendly names (idle, walk, run, jump, attack, hurt, death) and appropriate frame durations.
 6. Review with get_spritesheet_image.
+7. When the user wants it in their game: export_godot into a folder of their Godot project (and save_sprite to keep the editable .epx.json).
 
 Pixel art guidance: readable silhouette at 1x, consistent light source (top-left), 1px outlines, avoid pillow shading and orphan pixels, use hue shifting for shadows/highlights, leave transparent margins so animations do not clip.`;
 

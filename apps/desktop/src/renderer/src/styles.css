@@ -1017,3 +1017,17 @@ button.danger {
   align-items: center;
   gap: 8px;
 }
+.file-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text-muted);
+}
+.file-list .mono {
+  color: var(--text);
+}
+.field-row input:not([type]) {
+  flex: 1;
+}

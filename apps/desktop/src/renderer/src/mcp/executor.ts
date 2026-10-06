@@ -32,6 +32,7 @@ import {
   resolveLayer,
   scaleRegion,
   setFrameDuration,
+  setGodotSettings,
   setPalette,
   setPixels,
   shiftCel,
@@ -43,6 +44,7 @@ import {
   type SpriteDocument,
 } from '@easypixel/core';
 import type { McpCall, McpToolResult, ToolArgs, ToolName } from '../../../shared/mcp';
+import { exportToGodot } from '../lib/godot';
 import { encodePng } from '../lib/image';
 import { fileNameOf, saveFile } from '../lib/platform';
 import {
@@ -377,6 +379,30 @@ const handlers: Handlers = {
       undo();
     }
     return text(labels.length ? `Undid: ${labels.join(', ')}.` : 'Nothing to undo.');
+  },
+
+  async export_godot(args) {
+    const doc = present();
+    const dir = args.directory ?? doc.godot?.dir;
+    if (!dir) throw new Error('Pass `directory`: an absolute folder inside the Godot project (e.g. "/home/me/my_game/sprites/knight").');
+    const settings = {
+      dir,
+      columns: args.columns ?? doc.godot?.columns,
+      spacing: args.spacing ?? doc.godot?.spacing,
+      scale: args.scale ?? doc.godot?.scale,
+      autoplay: args.autoplay ?? doc.godot?.autoplay,
+    };
+    const clean = Object.fromEntries(Object.entries(settings).filter(([, v]) => v !== undefined)) as typeof settings;
+    const result = await exportToGodot(doc, clean);
+    if (JSON.stringify(clean) !== JSON.stringify(doc.godot)) edit('export_godot settings', (d) => setGodotSettings(d, clean));
+    return text(
+      [
+        `Exported to ${result.resDir}:`,
+        ...result.written.map((p) => `- ${p}`),
+        `Animations: ${result.animations.join(', ')}.`,
+        `Use the .tscn directly, or the .tres as SpriteFrames of an AnimatedSprite2D. For a Sprite2D use the .png with hframes=${result.hframes}, vframes=${result.vframes}.`,
+      ].join('\n'),
+    );
   },
 
   async save_sprite(args) {

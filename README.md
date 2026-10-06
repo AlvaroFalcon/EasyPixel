@@ -14,7 +14,7 @@ directamente a **Godot 4**.
 | 2. Editor: lienzo, herramientas, paleta, capas, frames, guardar/abrir | ✅ |
 | 3. Animación: tags, onion skin, previsualización | ✅ |
 | 4. Servidor MCP para Claude | ✅ |
-| 5. Exportación Godot (`SpriteFrames.tres`) | ⏳ |
+| 5. Exportación Godot (`SpriteFrames.tres`) | ✅ |
 
 ## Requisitos
 
@@ -35,7 +35,7 @@ Calidad:
 npm test             # tests unitarios (Vitest)
 npm run typecheck    # TypeScript estricto en todos los paquetes
 npm run test:e2e     # tests de interfaz en navegador (Playwright)
-npm run test:electron  # integración real: app Electron + clientes MCP (HTTP y stdio)
+npm run test:electron  # integración real: app Electron + clientes MCP (HTTP y stdio) + export Godot
 ```
 
 ## Estructura
@@ -70,10 +70,33 @@ ediciones que haga Claude (el historial guarda el origen de cada cambio).
 | `Ctrl+S` | Guardar | `Intro` / `Esc` | Fijar / cancelar selección flotante |
 | `Ctrl+O` | Abrir | `Ctrl+G` | Rejilla |
 | `P` | Reproducir / pausar animación | `Mayús`+clic en frame | Seleccionar rango de frames |
+| `Ctrl+Shift+E` | Re-exportar a Godot | | |
 | `Ctrl+I` | Importar PNG | `Ctrl+E` | Exportar PNG |
 
 Clic izquierdo dibuja con el color principal y clic derecho con el secundario.
 Por defecto el secundario es transparente, así que el clic derecho borra.
+
+## Exportar a Godot 4
+
+**Archivo → Exportar a Godot…** y elige una carpeta dentro de tu proyecto (EasyPixel busca
+`project.godot` hacia arriba y calcula la ruta `res://`). Se generan tres archivos:
+
+| Archivo | Para qué |
+|---|---|
+| `<nombre>.png` | Spritesheet en rejilla (columnas, separación y escala configurables). Vale también para `Sprite2D` con `hframes`/`vframes`. |
+| `<nombre>.tres` | `SpriteFrames` con un `AtlasTexture` por frame y **una animación por cada animación de EasyPixel**: velocidad y duración relativa calculadas a partir de los ms de cada frame, bucle respetado y ping-pong/reversa expandidos (Godot solo reproduce hacia delante). Sin animaciones se exporta `default`. |
+| `<nombre>.tscn` | Escena `AnimatedSprite2D` lista para instanciar: `texture_filter = Nearest` y `autoplay` (por defecto `idle`). |
+
+Los ajustes se guardan en el `.epx.json`, así que después basta con **Ctrl+Shift+E** para
+re-exportar (Godot reimporta los cambios automáticamente). Claude puede hacer lo mismo con la
+herramienta MCP `export_godot`.
+
+Consejos para pixel art en Godot: en *Project Settings → Rendering → Textures* pon
+*Default Texture Filter* en **Nearest** (la escena exportada ya lo fuerza en su nodo) y usa
+*Display → Window → Stretch* con modo `viewport` o `canvas_items` y escala entera.
+
+> Validado con Godot 4.5.1: `npm run test:electron` con `GODOT_BIN=/ruta/a/godot` importa y carga
+> los recursos exportados en un Godot real (headless).
 
 ## Dibujar con Claude (MCP)
 
@@ -123,6 +146,7 @@ Herramientas disponibles:
 | Capas | `add_layer`, `update_layer`, `delete_layer` |
 | Frames y animaciones | `add_frame`, `delete_frame`, `set_frame_duration`, `create_animation`, `update_animation`, `delete_animation` |
 | Revisión | `get_frame_image` (PNG ampliado con rejilla), `get_spritesheet_image`, `get_frame_grid`, `undo` |
+| Godot | `export_godot` (PNG + `SpriteFrames.tres` + escena `.tscn` en tu proyecto) |
 
 Además expone el prompt `pixel_art_sprite` (flujo guiado) e instrucciones de servidor con las
 convenciones (coordenadas, formato de rejilla) y consejos de pixel art.

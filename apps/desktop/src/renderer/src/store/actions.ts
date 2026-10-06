@@ -10,9 +10,11 @@ import {
   type SpriteDocument,
 } from '@easypixel/core';
 import { create } from 'zustand';
+import { exportToGodot } from '../lib/godot';
 import { decodeImage, encodePng } from '../lib/image';
 import { fileNameOf, isElectron, openFile, saveFile } from '../lib/platform';
 import { fmt, t } from '../strings';
+import type { GodotExportSettings } from '@easypixel/core';
 import { activateTab, allTabs, isTabDirty, markSaved, notify, openDocument, settleFloating, useEditor, type DocTab } from './editor';
 
 export type DialogState =
@@ -23,6 +25,7 @@ export type DialogState =
   /** Create (no tagId) or edit an animation tag. */
   | { kind: 'tag'; tagId?: string }
   | { kind: 'mcp' }
+  | { kind: 'godot' }
   | null;
 
 export const useDialog = create<{ dialog: DialogState }>(() => ({ dialog: null }));
@@ -141,4 +144,24 @@ export async function exportPalette(): Promise<void> {
     data: serializeHexPalette(doc.palette),
   });
   if (path) notify(fmt(t.status.exported, { path: fileNameOf(path) }));
+}
+
+/** Exports with the given settings and reports the result as a notice. */
+export async function runGodotExport(settings: GodotExportSettings): Promise<boolean> {
+  settleFloating();
+  try {
+    const result = await exportToGodot(useEditor.getState().history.present.doc, settings);
+    notify(fmt(t.godot.exported, { res: result.resDir, n: result.written.length }));
+    return true;
+  } catch (e) {
+    notify((e as Error).message, 'error');
+    return false;
+  }
+}
+
+/** Re-exports with the settings saved in the sprite, or opens the dialog the first time. */
+export function quickGodotExport(): void {
+  const settings = useEditor.getState().history.present.doc.godot;
+  if (settings && isElectron) void runGodotExport(settings);
+  else openDialog({ kind: 'godot' });
 }

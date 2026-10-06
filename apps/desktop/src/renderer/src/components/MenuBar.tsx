@@ -1,7 +1,7 @@
 import { flipCel, clearCel } from '@easypixel/core';
 import { useEffect, useRef, useState } from 'react';
 import { isElectron } from '../lib/platform';
-import { exportPalette, importPng, openDialog, openSprite, saveSprite } from '../store/actions';
+import { exportPalette, importPng, openDialog, openSprite, quickGodotExport, saveSprite } from '../store/actions';
 import {
   commit,
   copySelection,
@@ -89,6 +89,7 @@ export function MenuBar() {
   const hasSelection = useEditor((s) => !!s.selection);
   const hasClipboard = useEditor((s) => !!s.clipboard);
   const showGrid = useEditor((s) => s.showGrid);
+  const hasGodot = useEditor((s) => !!s.history.present.doc.godot);
   const dirty = useEditor(isDirty);
   const name = useEditor((s) => (s.filePath ? fileNameOf(s.filePath) : `${s.doc.name} (${t.untitled})`));
 
@@ -101,6 +102,8 @@ export function MenuBar() {
     'separator',
     { label: t.menu.importPng, shortcut: `${mod}I`, action: () => void importPng() },
     { label: t.menu.exportPng, shortcut: `${mod}E`, action: () => openDialog({ kind: 'export' }) },
+    { label: t.godot.menuExport, action: () => openDialog({ kind: 'godot' }) },
+    { label: t.godot.menuReexport, shortcut: `${mod}⇧E`, action: quickGodotExport, disabled: !hasGodot },
     { label: t.palette.exportFile, action: () => void exportPalette() },
   ];
   const edit: Entry[] = [

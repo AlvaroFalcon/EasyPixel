@@ -5,6 +5,7 @@ import {
   DEFAULT_FRAME_DURATION,
   type CelData,
   type Frame,
+  type GodotExportSettings,
   type Layer,
   type SpriteDocument,
   type Tag,
@@ -30,6 +31,7 @@ export interface SpriteFileV1 {
   frames: Frame[];
   tags: Tag[];
   cels: { layer: string; frame: string; data: string }[];
+  godot?: GodotExportSettings;
 }
 
 export function serializeDocument(doc: SpriteDocument): SpriteFileV1 {
@@ -51,6 +53,7 @@ export function serializeDocument(doc: SpriteDocument): SpriteFileV1 {
     frames: doc.frames.map((f) => ({ ...f })),
     tags: doc.tags.map((t) => ({ ...t })),
     cels,
+    ...(doc.godot ? { godot: { ...doc.godot } } : {}),
   };
 }
 
@@ -122,7 +125,20 @@ export function deserializeDocument(raw: unknown): SpriteDocument {
     frames,
     tags,
     cels,
+    ...(parseGodot(f.godot) ? { godot: parseGodot(f.godot) } : {}),
   };
+}
+
+function parseGodot(raw: unknown): GodotExportSettings | undefined {
+  const g = raw as Partial<GodotExportSettings> | undefined;
+  if (!g || typeof g !== 'object' || typeof g.dir !== 'string' || !g.dir) return undefined;
+  const int = (v: unknown, min: number) => (typeof v === 'number' && Number.isInteger(v) && v >= min ? v : undefined);
+  const out: GodotExportSettings = { dir: g.dir };
+  if (int(g.columns, 1)) out.columns = int(g.columns, 1);
+  if (int(g.spacing, 0) !== undefined) out.spacing = int(g.spacing, 0);
+  if (int(g.scale, 1)) out.scale = int(g.scale, 1);
+  if (typeof g.autoplay === 'string') out.autoplay = g.autoplay;
+  return out;
 }
 
 // Portable base64 (works in browsers, Node and Electron without Buffer/atob).

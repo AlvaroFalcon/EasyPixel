@@ -21,6 +21,12 @@ describe('serialization', () => {
     expect(back.cels[celKey(L, d.frames[0].id)]).toBeUndefined();
   });
 
+  it('keeps Godot export settings', () => {
+    const d = { ...createDocument({ width: 2, height: 2 }), godot: { dir: '/game/sprites', columns: 4, spacing: 0, autoplay: 'idle' } };
+    expect(documentFromJson(documentToJson(d)).godot).toEqual(d.godot);
+    expect(documentFromJson(documentToJson(createDocument({ width: 2, height: 2 }))).godot).toBeUndefined();
+  });
+
   it('rejects foreign or corrupt files', () => {
     expect(() => documentFromJson('{}')).toThrow(/Not an EasyPixel file/);
     expect(() => documentFromJson('not json')).toThrow();

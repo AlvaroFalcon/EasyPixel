@@ -1,4 +1,4 @@
-import { importPng, openDialog, openSprite, saveSprite, useDialog } from './store/actions';
+import { importPng, openDialog, openSprite, quickGodotExport, saveSprite, useDialog } from './store/actions';
 import {
   cancelFloating,
   copySelection,
@@ -55,7 +55,8 @@ export function installShortcuts(): () => void {
           void importPng();
           break;
         case 'e':
-          openDialog({ kind: 'export' });
+          if (e.shiftKey) quickGodotExport();
+          else openDialog({ kind: 'export' });
           break;
         case 'c':
           copySelection();

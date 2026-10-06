@@ -9,6 +9,9 @@ import {
   PALETTE_PRESETS,
   removeTag,
   resizeCanvas,
+  setGodotSettings,
+  snakeName,
+  type GodotExportSettings,
   updateTag,
   sliceSpritesheet,
   type Anchor,
@@ -18,7 +21,9 @@ import {
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { regionToCanvas } from '../lib/image';
 import { claudeCodeCommand, claudeDesktopConfig, useMcp } from '../mcp/connection';
-import { closeDialog, exportImage, exportPng, newDocument, useDialog, type ExportOptions } from '../store/actions';
+import { closeDialog, exportImage, exportPng, newDocument, runGodotExport, useDialog, type ExportOptions } from '../store/actions';
+import { godotProject, isElectron, pickDirectory } from '../lib/platform';
+import type { GodotProjectInfo } from '../../../shared/api';
 import { commit, notify, pasteFloating, useEditor } from '../store/editor';
 import { fmt, t } from '../strings';
 
@@ -440,6 +445,150 @@ function TagDialog({ tagId }: { tagId?: string }) {
   );
 }
 
+function GodotDialog() {
+  const doc = useEditor((s) => s.history.present.doc);
+  const saved = doc.godot;
+  const [dir, setDir] = useState(saved?.dir ?? '');
+  const [columns, setColumns] = useState(saved?.columns ?? Math.min(doc.frames.length, 16));
+  const [spacing, setSpacing] = useState(saved?.spacing ?? 0);
+  const [scale, setScale] = useState(saved?.scale ?? 1);
+  const [autoplay, setAutoplay] = useState(saved?.autoplay ?? (doc.tags.find((tag) => tag.name === 'idle') ?? doc.tags[0])?.name ?? '');
+  const [remember, setRemember] = useState(true);
+  const [project, setProject] = useState<GodotProjectInfo | null | undefined>(undefined);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!isElectron || !dir) {
+      setProject(undefined);
+      return;
+    }
+    let cancelled = false;
+    void godotProject(dir).then((info) => !cancelled && setProject(info));
+    return () => {
+      cancelled = true;
+    };
+  }, [dir]);
+
+  const n = doc.frames.length;
+  const cols = Math.max(1, Math.min(columns || 1, n));
+  const rows = Math.ceil(n / cols);
+  const base = snakeName(doc.name);
+  const valid = !busy && (isElectron ? !!dir && !!project : true);
+
+  return (
+    <Modal
+      title={t.godot.title}
+      submitLabel={t.dialogs.export}
+      valid={valid}
+      onSubmit={() => {
+        const settings: GodotExportSettings = {
+          dir: isElectron ? dir : 'res://',
+          columns: cols,
+          spacing,
+          scale,
+          ...(autoplay ? { autoplay } : {}),
+        };
+        if (remember && isElectron && JSON.stringify(settings) !== JSON.stringify(saved)) {
+          commit((d) => setGodotSettings(d, settings), t.godot.menuExport);
+        }
+        setBusy(true);
+        void runGodotExport(settings).then((ok) => {
+          setBusy(false);
+          if (ok) closeDialog();
+        });
+      }}
+    >
+      {isElectron ? (
+        <div className="field">
+          {t.godot.folder}
+          <div className="field-row">
+            <input value={dir} onChange={(e) => setDir(e.target.value)} placeholder="/ruta/a/mi-juego/sprites" data-testid="godot-dir" />
+            <button
+              type="button"
+              onClick={() => void pickDirectory(t.godot.folder).then((picked) => picked && setDir(picked))}
+            >
+              {t.godot.choose}
+            </button>
+          </div>
+          {dir && project && (
+            <small className="muted">
+              {fmt(t.godot.detected, { root: project.root })} · <span className="mono">{fmt(t.godot.resPath, { res: project.resDir })}</span>
+            </small>
+          )}
+          {dir && project === null && <small className="error-text">{t.godot.notProject}</small>}
+        </div>
+      ) : (
+        <p className="muted">{t.godot.browserNote}</p>
+      )}
+      <div className="field-row">
+        <label>
+          {t.godot.columns}
+          <input type="number" min={1} max={n} value={columns} onChange={(e) => setColumns(Number(e.target.value))} />
+        </label>
+        <label>
+          {t.godot.spacing}
+          <input type="number" min={0} value={spacing} onChange={(e) => setSpacing(Math.max(0, Number(e.target.value)))} />
+        </label>
+        <label>
+          {t.godot.scale}
+          <select value={scale} onChange={(e) => setScale(Number(e.target.value))}>
+            {[1, 2, 3, 4].map((k) => (
+              <option key={k} value={k}>
+                {k}×
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {doc.tags.length > 0 ? (
+        <label className="field">
+          {t.godot.autoplay}
+          <select value={autoplay} onChange={(e) => setAutoplay(e.target.value)}>
+            {doc.tags.map((tag) => (
+              <option key={tag.id} value={tag.name}>
+                {tag.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : (
+        <p className="muted">{t.godot.noTagsHint}</p>
+      )}
+      <div className="field">
+        {t.godot.files}
+        <ul className="file-list">
+          <li>
+            <span className="mono">{base}.png</span> —{' '}
+            {fmt(t.godot.pngHint, {
+              w: (cols * doc.width + (cols - 1) * spacing) * scale,
+              h: (rows * doc.height + (rows - 1) * spacing) * scale,
+              h1: cols,
+              v1: rows,
+            })}
+          </li>
+          <li>
+            <span className="mono">{base}.tres</span> —{' '}
+            {fmt(t.godot.tresHint, {
+              n: Math.max(1, doc.tags.length),
+              names: doc.tags.length ? doc.tags.map((tag) => tag.name).join(', ') : 'default',
+            })}
+          </li>
+          <li>
+            <span className="mono">{base}.tscn</span> — {t.godot.tscnHint}
+          </li>
+        </ul>
+        {doc.tags.some((tag) => tag.direction !== 'forward') && <small className="muted">{t.godot.pingpongHint}</small>}
+      </div>
+      {isElectron && (
+        <label className="option">
+          <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+          {t.godot.remember}
+        </label>
+      )}
+    </Modal>
+  );
+}
+
 function CodeRow({ title, hint, code }: { title: string; hint: string; code: string }) {
   return (
     <section className="code-row">
@@ -507,5 +656,7 @@ export function Dialogs() {
       return <TagDialog tagId={dialog.tagId} />;
     case 'mcp':
       return <McpDialog />;
+    case 'godot':
+      return <GodotDialog />;
   }
 }

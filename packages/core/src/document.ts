@@ -38,6 +38,16 @@ export interface Tag {
   loop: boolean;
 }
 
+/** Remembered Godot export target, so re-exporting is one click (saved in the project file). */
+export interface GodotExportSettings {
+  /** Absolute folder inside a Godot project. */
+  dir: string;
+  columns?: number;
+  spacing?: number;
+  scale?: number;
+  autoplay?: string;
+}
+
 export interface SpriteDocument {
   name: string;
   width: number;
@@ -49,6 +59,7 @@ export interface SpriteDocument {
   tags: Tag[];
   /** Keyed by celKey(layerId, frameId). A missing entry means a fully transparent cel. */
   cels: Record<string, CelData>;
+  godot?: GodotExportSettings;
 }
 
 export const DEFAULT_FRAME_DURATION = 100;

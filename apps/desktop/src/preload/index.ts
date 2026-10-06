@@ -13,6 +13,9 @@ const api: EasyPixelApi = {
   openFile: (options) => ipcRenderer.invoke(IPC.openFile, options),
   saveFile: (options) => ipcRenderer.invoke(IPC.saveFile, options),
   setWindowState: (state) => ipcRenderer.send(IPC.setWindowState, state),
+  pickDirectory: (title) => ipcRenderer.invoke(IPC.pickDirectory, title),
+  godotProject: (dir) => ipcRenderer.invoke(IPC.godotProject, dir),
+  writeFiles: (dir, files) => ipcRenderer.invoke(IPC.writeFiles, dir, files),
   mcp: {
     getStatus: () => ipcRenderer.invoke(MCP_IPC.info),
     onStatus: (cb) => subscribe<McpStatus>(MCP_IPC.status, cb),

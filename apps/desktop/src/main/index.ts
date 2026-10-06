@@ -1,7 +1,7 @@
-import { readFile, writeFile } from 'node:fs/promises';
-import { basename, join } from 'node:path';
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
-import { IPC, type OpenFileOptions, type SaveFileOptions } from '../shared/api';
+import { IPC, type FileToWrite, type GodotProjectInfo, type OpenFileOptions, type SaveFileOptions } from '../shared/api';
 import { MCP_DEFAULT_PORT, MCP_IPC } from '../shared/mcp';
 import { startMcpServer, type McpServerHandle } from './mcpServer';
 
@@ -107,6 +107,29 @@ function registerIpc(): void {
     return path;
   });
 
+  ipcMain.handle(IPC.pickDirectory, async (event, title?: string) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const result = await dialog.showOpenDialog(win!, { title, properties: ['openDirectory', 'createDirectory'] });
+    return result.canceled ? null : (result.filePaths[0] ?? null);
+  });
+
+  ipcMain.handle(IPC.godotProject, (_event, dir: string) => findGodotProject(dir));
+
+  ipcMain.handle(IPC.writeFiles, async (_event, dir: string, files: FileToWrite[]) => {
+    if (!isAbsolute(dir)) throw new Error(`Folder must be an absolute path: ${dir}`);
+    await mkdir(dir, { recursive: true });
+    const written: string[] = [];
+    for (const file of files) {
+      if (!file.name || file.name !== basename(file.name) || file.name.startsWith('.')) {
+        throw new Error(`Invalid file name: ${file.name}`);
+      }
+      const path = join(dir, file.name);
+      await writeFile(path, file.data);
+      written.push(path);
+    }
+    return written;
+  });
+
   ipcMain.on(IPC.setWindowState, (event, state: { title: string; dirty: boolean }) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win) return;
@@ -115,6 +138,24 @@ function registerIpc(): void {
     win.setTitle(`${state.dirty ? '• ' : ''}${state.title} — ${APP_NAME}`);
     win.setDocumentEdited(state.dirty);
   });
+}
+
+/** Walks up from `dir` looking for project.godot (the folder may not exist yet). */
+async function findGodotProject(dir: string): Promise<GodotProjectInfo | null> {
+  if (!isAbsolute(dir)) return null;
+  const target = resolve(dir);
+  let current = target;
+  for (;;) {
+    try {
+      await access(join(current, 'project.godot'));
+      const rel = relative(current, target).split(sep).join('/');
+      return { root: current, resDir: rel ? `res://${rel}` : 'res://' };
+    } catch {
+      const parent = dirname(current);
+      if (parent === current) return null;
+      current = parent;
+    }
+  }
 }
 
 app.whenReady().then(() => {

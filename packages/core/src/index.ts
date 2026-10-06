@@ -10,3 +10,4 @@ export * from './serialize';
 export * from './spritesheet';
 export * from './animation';
 export * from './agent';
+export * from './godot';

@@ -1,3 +1,6 @@
+import { execFileSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
@@ -70,4 +73,45 @@ test('Claude Desktop style client (stdio bridge) reaches the same server', async
   const state = (await client.callTool({ name: 'get_editor_state', arguments: {} })) as Result;
   expect(JSON.parse(textOf(state)).active.name).toBe('slime');
   await client.close();
+});
+
+test('exports to a Godot 4 project (validated with Godot when GODOT_BIN is set)', async () => {
+  const project = mkdtempSync(join(tmpdir(), 'easypixel-godot-'));
+  writeFileSync(join(project, 'project.godot'), 'config_version=5\n\n[application]\nconfig/name="EasyPixelTest"\n');
+  const dir = join(project, 'sprites', 'slime');
+
+  const client = new Client({ name: 'test', version: '1.0.0' });
+  await client.connect(new StreamableHTTPClientTransport(new URL(URL_)));
+  const call = async (name: string, args: Record<string, unknown> = {}) => (await client.callTool({ name, arguments: args })) as Result;
+  await call('add_frame', { duplicate: true });
+  await call('transform', { operation: 'shift', dy: 1 });
+  await call('create_animation', { name: 'idle', from: 0, to: 1, direction: 'pingpong' });
+  const notProject = await call('export_godot', { directory: tmpdir() + '/definitely-not-godot' });
+  expect(notProject.isError).toBe(true);
+  const result = await call('export_godot', { directory: dir });
+  expect(result.isError).toBeFalsy();
+  expect(textOf(result)).toContain('res://sprites/slime');
+  for (const f of ['slime.png', 'slime.tres', 'slime.tscn']) expect(existsSync(join(dir, f))).toBe(true);
+  expect(readFileSync(join(dir, 'slime.tres'), 'utf8')).toContain('path="res://sprites/slime/slime.png"');
+  // Settings are remembered: re-export without a directory
+  expect((await call('export_godot', {})).isError).toBeFalsy();
+  await client.close();
+
+  const godot = process.env.GODOT_BIN;
+  test.skip(!godot, 'Set GODOT_BIN to validate the files with a real Godot 4');
+  writeFileSync(
+    join(project, 'check.gd'),
+    [
+      'extends SceneTree',
+      'func _init():',
+      '\tvar frames: SpriteFrames = load("res://sprites/slime/slime.tres")',
+      '\tvar node = (load("res://sprites/slime/slime.tscn") as PackedScene).instantiate()',
+      '\tprint("CHECK ", frames.get_animation_names(), " ", frames.get_frame_count("idle"), " ", node.get_class(), " ", node.autoplay)',
+      '\tnode.free()',
+      '\tquit()',
+    ].join('\n'),
+  );
+  execFileSync(godot!, ['--headless', '--path', project, '--import'], { stdio: 'ignore', timeout: 60_000 });
+  const out = execFileSync(godot!, ['--headless', '--path', project, '--quit-after', '600', '--script', 'check.gd'], { encoding: 'utf8', timeout: 60_000 });
+  expect(out).toContain('CHECK ["idle"] 2 AnimatedSprite2D idle');
 });

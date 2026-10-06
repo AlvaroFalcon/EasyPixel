@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addFrame, addLayer, addTag, celKey, clearCel, compositeFrame, copyRegion, createDocument,
   duplicateFrame, duplicateLayer, flipCel, getPixel, mergeLayerDown, moveLayer, pasteRegion,
-  removeFrame, removeLayer, replaceColor, resizeCanvas, setPixels, shiftCel, updateLayer,
+  removeFrame, removeLayer, replaceColor, resizeCanvas, setPixels, shiftCel, updateLayer, updateTag,
 } from '../src';
 
 const RED = 0xff0000ff;
@@ -135,6 +135,15 @@ describe('frames and tags', () => {
     d = removeFrame(d, d.frames[0].id);
     expect(d.tags[0]).toMatchObject({ from: 0, to: 0 });
     expect(() => removeFrame(d, d.frames[0].id)).toThrow();
+  });
+
+  it('applies defaults when optional fields are explicitly undefined', () => {
+    const d = base();
+    const { doc, tag } = addTag(d, { name: 'idle', from: 0, to: 0, direction: undefined, loop: undefined });
+    expect(tag).toMatchObject({ direction: 'forward', loop: true });
+    const updated = updateTag(doc, tag.id, { loop: undefined, name: undefined });
+    expect(updated.tags[0]).toMatchObject({ name: 'idle', loop: true });
+    expect(updateLayer(d, d.layers[0].id, { visible: undefined }).layers[0].visible).toBe(true);
   });
 
   it('validates tag ranges and names', () => {

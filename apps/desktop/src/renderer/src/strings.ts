@@ -128,6 +128,31 @@ export const t = {
     nameHint: 'Usa nombres como idle, walk, run, jump, attack… (se usarán en Godot)',
   },
 
+  godot: {
+    menuExport: 'Exportar a Godot…',
+    menuReexport: 'Re-exportar a Godot',
+    title: 'Exportar a Godot 4',
+    folder: 'Carpeta destino (dentro de tu proyecto Godot)',
+    choose: 'Elegir…',
+    detected: 'Proyecto Godot: {root}',
+    resPath: 'Ruta en Godot: {res}',
+    notProject: 'No se encontró project.godot en esta carpeta ni en sus padres.',
+    browserNote:
+      'En la versión de navegador los archivos se descargan: colócalos en la raíz de tu proyecto Godot (res://).',
+    columns: 'Columnas',
+    spacing: 'Separación',
+    scale: 'Escala',
+    autoplay: 'Animación inicial',
+    remember: 'Recordar estos ajustes en el sprite',
+    files: 'Se generarán:',
+    pngHint: 'spritesheet ({w}×{h} px, hframes={h1}, vframes={v1})',
+    tresHint: 'SpriteFrames con {n} animación(es): {names}',
+    tscnHint: 'escena AnimatedSprite2D lista para arrastrar (filtro Nearest, autoplay)',
+    noTagsHint: 'Sin animaciones definidas: se exportará una animación «default» con todos los frames.',
+    exported: 'Exportado a Godot: {res} ({n} archivos)',
+    pingpongHint: 'Las animaciones ping-pong y en reversa se expanden (Godot solo reproduce hacia delante).',
+  },
+
   tabs: {
     close: 'Cerrar (clic central)',
   },

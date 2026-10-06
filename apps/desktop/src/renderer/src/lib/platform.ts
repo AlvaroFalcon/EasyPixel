@@ -1,4 +1,4 @@
-import type { OpenedFile, OpenFileOptions, SaveFileOptions } from '../../../shared/api';
+import type { FileToWrite, GodotProjectInfo, OpenedFile, OpenFileOptions, SaveFileOptions } from '../../../shared/api';
 
 /**
  * File access that works both inside Electron (native dialogs, real paths)
@@ -44,4 +44,19 @@ export function setWindowState(title: string, dirty: boolean): void {
 
 export function fileNameOf(path: string): string {
   return path.split(/[\\/]/).pop() ?? path;
+}
+
+export async function pickDirectory(title?: string): Promise<string | null> {
+  return window.easypixel ? window.easypixel.pickDirectory(title) : null;
+}
+
+export async function godotProject(dir: string): Promise<GodotProjectInfo | null> {
+  return window.easypixel ? window.easypixel.godotProject(dir) : null;
+}
+
+/** Writes files into a folder (Electron) or downloads them one by one (browser). */
+export async function writeFiles(dir: string, files: FileToWrite[]): Promise<string[]> {
+  if (window.easypixel) return window.easypixel.writeFiles(dir, files);
+  for (const f of files) await saveFile({ defaultName: f.name, data: f.data });
+  return files.map((f) => f.name);
 }

@@ -217,6 +217,10 @@ export function renameDocument(doc: SpriteDocument, name: string): SpriteDocumen
   return { ...doc, name };
 }
 
+export function setGodotSettings(doc: SpriteDocument, godot: SpriteDocument['godot']): SpriteDocument {
+  return { ...doc, godot };
+}
+
 // ---------------------------------------------------------------------------
 // Layers
 // ---------------------------------------------------------------------------
@@ -243,7 +247,7 @@ export function updateLayer(
 ): SpriteDocument {
   const i = layerIndex(doc, layerId);
   const layers = [...doc.layers];
-  const next = { ...layers[i], ...patch };
+  const next = { ...layers[i], ...Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined)) };
   next.opacity = Math.min(1, Math.max(0, next.opacity));
   layers[i] = next;
   return { ...doc, layers };
@@ -399,14 +403,23 @@ export function addTag(
 ): { doc: SpriteDocument; tag: Tag } {
   assertTagRange(doc, tag.from, tag.to);
   if (doc.tags.some((t) => t.name === tag.name)) throw new Error(`An animation named "${tag.name}" already exists`);
-  const created: Tag = { direction: 'forward', loop: true, ...tag, id: newId('anim') };
+  // Explicit defaults: callers (e.g. MCP tools) may pass `undefined` for optional fields.
+  const created: Tag = {
+    id: newId('anim'),
+    name: tag.name,
+    from: tag.from,
+    to: tag.to,
+    direction: tag.direction ?? 'forward',
+    loop: tag.loop ?? true,
+  };
   return { doc: { ...doc, tags: [...doc.tags, created] }, tag: created };
 }
 
 export function updateTag(doc: SpriteDocument, tagId: string, patch: Partial<Omit<Tag, 'id'>>): SpriteDocument {
   const i = doc.tags.findIndex((t) => t.id === tagId);
   if (i < 0) throw new Error(`Animation not found: ${tagId}`);
-  const next = { ...doc.tags[i], ...patch };
+  const defined = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined));
+  const next = { ...doc.tags[i], ...defined };
   assertTagRange(doc, next.from, next.to);
   if (patch.name && doc.tags.some((t) => t.id !== tagId && t.name === patch.name)) {
     throw new Error(`An animation named "${patch.name}" already exists`);
