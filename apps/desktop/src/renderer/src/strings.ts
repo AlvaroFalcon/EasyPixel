@@ -128,6 +128,34 @@ export const t = {
     nameHint: 'Usa nombres como idle, walk, run, jump, attack… (se usarán en Godot)',
   },
 
+  tabs: {
+    close: 'Cerrar (clic central)',
+  },
+
+  mcp: {
+    createdByClaude: 'creado por Claude',
+    connectTitle: 'Conectar con Claude (MCP)',
+    menuConnect: 'Conectar con Claude…',
+    listening: 'MCP activo en {url}',
+    stopped: 'MCP detenido',
+    error: 'MCP no disponible: {error}',
+    webOnly: 'El servidor MCP solo funciona en la app de escritorio.',
+    working: 'Claude: {tool}',
+    intro:
+      'EasyPixel incluye un servidor MCP local. Conecta Claude y pídele que dibuje: verás los cambios en directo y podrás deshacerlos con Ctrl+Z.',
+    claudeCode: 'Claude Code',
+    claudeCodeHint: 'Ejecuta este comando en una terminal (una sola vez):',
+    claudeDesktop: 'Claude Desktop',
+    claudeDesktopHint:
+      'Añade esto a claude_desktop_config.json (Ajustes → Desarrollador → Editar configuración) y reinicia Claude Desktop:',
+    copy: 'Copiar',
+    copied: 'Copiado al portapapeles',
+    tryPrompt: 'Prueba a pedirle:',
+    examplePrompt:
+      'Dibuja en EasyPixel un caballero de 32×32 con paleta Endesga 32 y crea una animación idle de 4 frames.',
+    keepOpen: 'EasyPixel debe estar abierto mientras Claude dibuja.',
+  },
+
   dialogs: {
     cancel: 'Cancelar',
     ok: 'Aceptar',

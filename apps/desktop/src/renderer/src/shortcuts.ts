@@ -1,4 +1,4 @@
-import { importPng, openDialog, openSprite, saveSprite, confirmDiscard, useDialog } from './store/actions';
+import { importPng, openDialog, openSprite, saveSprite, useDialog } from './store/actions';
 import {
   cancelFloating,
   copySelection,
@@ -49,7 +49,7 @@ export function installShortcuts(): () => void {
           void openSprite();
           break;
         case 'n':
-          if (confirmDiscard()) openDialog({ kind: 'new' });
+          openDialog({ kind: 'new' });
           break;
         case 'i':
           void importPng();

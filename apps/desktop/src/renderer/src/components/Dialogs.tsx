@@ -17,8 +17,9 @@ import {
 } from '@easypixel/core';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { regionToCanvas } from '../lib/image';
+import { claudeCodeCommand, claudeDesktopConfig, useMcp } from '../mcp/connection';
 import { closeDialog, exportImage, exportPng, newDocument, useDialog, type ExportOptions } from '../store/actions';
-import { commit, pasteFloating, useEditor } from '../store/editor';
+import { commit, notify, pasteFloating, useEditor } from '../store/editor';
 import { fmt, t } from '../strings';
 
 function Modal({ title, children, onSubmit, submitLabel = t.dialogs.ok, valid = true, extra }: {
@@ -439,6 +440,57 @@ function TagDialog({ tagId }: { tagId?: string }) {
   );
 }
 
+function CodeRow({ title, hint, code }: { title: string; hint: string; code: string }) {
+  return (
+    <section className="code-row">
+      <header>
+        <h3>{title}</h3>
+        <button
+          type="button"
+          onClick={() => {
+            void navigator.clipboard.writeText(code).then(() => notify(t.mcp.copied));
+          }}
+        >
+          {t.mcp.copy}
+        </button>
+      </header>
+      <small className="muted">{hint}</small>
+      <pre className="code-block">{code}</pre>
+    </section>
+  );
+}
+
+function McpDialog() {
+  const status = useMcp((s) => s.status);
+  return (
+    <Modal title={t.mcp.connectTitle} submitLabel={t.dialogs.ok} onSubmit={closeDialog}>
+      <p className="muted">{t.mcp.intro}</p>
+      {!status ? (
+        <p className="error-text">{t.mcp.webOnly}</p>
+      ) : (
+        <>
+          <div className="status-line">
+            <span className={`mcp-indicator ${status.state}`}>
+              <span className="mcp-dot" />
+            </span>
+            {status.state === 'error' ? (
+              <span className="error-text">{fmt(t.mcp.error, { error: status.error ?? '' })}</span>
+            ) : (
+              <span className="mono">{fmt(t.mcp.listening, { url: status.url })}</span>
+            )}
+          </div>
+          <CodeRow title={t.mcp.claudeCode} hint={t.mcp.claudeCodeHint} code={claudeCodeCommand(status)} />
+          <CodeRow title={t.mcp.claudeDesktop} hint={t.mcp.claudeDesktopHint} code={claudeDesktopConfig(status)} />
+          <p className="muted">
+            {t.mcp.tryPrompt} <em>«{t.mcp.examplePrompt}»</em>
+          </p>
+          <small className="muted">{t.mcp.keepOpen}</small>
+        </>
+      )}
+    </Modal>
+  );
+}
+
 export function Dialogs() {
   const dialog = useDialog((s) => s.dialog);
   if (!dialog) return null;
@@ -453,5 +505,7 @@ export function Dialogs() {
       return <ExportDialog />;
     case 'tag':
       return <TagDialog tagId={dialog.tagId} />;
+    case 'mcp':
+      return <McpDialog />;
   }
 }

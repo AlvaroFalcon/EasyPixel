@@ -9,3 +9,4 @@ export * from './palettes';
 export * from './serialize';
 export * from './spritesheet';
 export * from './animation';
+export * from './agent';

@@ -13,7 +13,7 @@ import { create } from 'zustand';
 import { decodeImage, encodePng } from '../lib/image';
 import { fileNameOf, isElectron, openFile, saveFile } from '../lib/platform';
 import { fmt, t } from '../strings';
-import { isDirty, loadDocument, markSaved, notify, settleFloating, useEditor } from './editor';
+import { activateTab, allTabs, isTabDirty, markSaved, notify, openDocument, settleFloating, useEditor, type DocTab } from './editor';
 
 export type DialogState =
   | { kind: 'new' }
@@ -22,6 +22,7 @@ export type DialogState =
   | { kind: 'export' }
   /** Create (no tagId) or edit an animation tag. */
   | { kind: 'tag'; tagId?: string }
+  | { kind: 'mcp' }
   | null;
 
 export const useDialog = create<{ dialog: DialogState }>(() => ({ dialog: null }));
@@ -38,22 +39,27 @@ export function closeDialog(): void {
 const SPRITE_FILTERS = [{ name: 'EasyPixel', extensions: ['epx.json', 'json'] }];
 const PNG_FILTERS = [{ name: 'PNG', extensions: ['png'] }];
 
-/** Asks before throwing away unsaved work. */
-export function confirmDiscard(): boolean {
-  return !isDirty(useEditor.getState()) || window.confirm(t.dialogs.discardChanges);
+/** Asks before throwing away the unsaved work of a tab. */
+export function confirmDiscard(tab: Pick<DocTab, 'history' | 'savedDoc'>): boolean {
+  return !isTabDirty(tab) || window.confirm(t.dialogs.discardChanges);
 }
 
 export function newDocument(doc: SpriteDocument): void {
-  loadDocument(doc, null);
+  openDocument(doc, null);
 }
 
 export async function openSprite(): Promise<void> {
-  if (!confirmDiscard()) return;
   try {
     const file = await openFile({ title: t.menu.open, filters: SPRITE_FILTERS });
     if (!file) return;
+    const path = isElectron ? file.path : null;
+    const already = path && allTabs().find((tab) => tab.filePath === path);
+    if (already) {
+      activateTab(already.id);
+      return;
+    }
     const doc = documentFromJson(file.data as string);
-    loadDocument(doc, isElectron ? file.path : null);
+    openDocument(doc, path);
     notify(fmt(t.status.opened, { name: file.name }));
   } catch (e) {
     notify((e as Error).message, 'error');

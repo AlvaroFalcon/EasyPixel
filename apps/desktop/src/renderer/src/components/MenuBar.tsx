@@ -1,7 +1,7 @@
 import { flipCel, clearCel } from '@easypixel/core';
 import { useEffect, useRef, useState } from 'react';
 import { isElectron } from '../lib/platform';
-import { exportPalette, importPng, openDialog, openSprite, saveSprite, confirmDiscard } from '../store/actions';
+import { exportPalette, importPng, openDialog, openSprite, saveSprite } from '../store/actions';
 import {
   commit,
   copySelection,
@@ -93,7 +93,7 @@ export function MenuBar() {
   const name = useEditor((s) => (s.filePath ? fileNameOf(s.filePath) : `${s.doc.name} (${t.untitled})`));
 
   const file: Entry[] = [
-    { label: t.menu.newSprite, shortcut: `${mod}N`, action: () => confirmDiscard() && openDialog({ kind: 'new' }) },
+    { label: t.menu.newSprite, shortcut: `${mod}N`, action: () => openDialog({ kind: 'new' }) },
     { label: t.menu.open, shortcut: `${mod}O`, action: () => void openSprite() },
     'separator',
     { label: t.menu.save, shortcut: `${mod}S`, action: () => void saveSprite() },
@@ -140,6 +140,7 @@ export function MenuBar() {
       <Menu label={t.menu.edit} items={edit} />
       <Menu label={t.menu.sprite} items={sprite} />
       <Menu label={t.menu.view} items={view} />
+      <Menu label="Claude" items={[{ label: t.mcp.menuConnect, action: () => openDialog({ kind: 'mcp' }) }]} />
       <div className="menubar-actions">
         <button className="icon-button" title={`${t.menu.undo} (${mod}Z)`} onClick={undo} disabled={!canUndo}>
           <Icon name="undo" />

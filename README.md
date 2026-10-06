@@ -13,7 +13,7 @@ directamente a **Godot 4**.
 | 1. Base: modelo de documento, operaciones, historial, tests | ✅ |
 | 2. Editor: lienzo, herramientas, paleta, capas, frames, guardar/abrir | ✅ |
 | 3. Animación: tags, onion skin, previsualización | ✅ |
-| 4. Servidor MCP para Claude | ⏳ |
+| 4. Servidor MCP para Claude | ✅ |
 | 5. Exportación Godot (`SpriteFrames.tres`) | ⏳ |
 
 ## Requisitos
@@ -35,6 +35,7 @@ Calidad:
 npm test             # tests unitarios (Vitest)
 npm run typecheck    # TypeScript estricto en todos los paquetes
 npm run test:e2e     # tests de interfaz en navegador (Playwright)
+npm run test:electron  # integración real: app Electron + clientes MCP (HTTP y stdio)
 ```
 
 ## Estructura
@@ -73,6 +74,58 @@ ediciones que haga Claude (el historial guarda el origen de cada cambio).
 
 Clic izquierdo dibuja con el color principal y clic derecho con el secundario.
 Por defecto el secundario es transparente, así que el clic derecho borra.
+
+## Dibujar con Claude (MCP)
+
+Al abrir EasyPixel se inicia un servidor MCP local en `http://127.0.0.1:7777/mcp`
+(solo accesible desde tu equipo). El menú **Claude → Conectar con Claude…** muestra la
+configuración exacta para tu instalación, con botón de copiar.
+
+**Claude Code** (una sola vez):
+
+```bash
+claude mcp add --transport http easypixel http://127.0.0.1:7777/mcp
+```
+
+**Claude Desktop**: añade a `claude_desktop_config.json` (Ajustes → Desarrollador → Editar
+configuración) el bloque que muestra el diálogo. Usa un pequeño puente stdio que se ejecuta con el
+propio binario de EasyPixel/Electron, así que no necesitas Node instalado:
+
+```json
+{
+  "mcpServers": {
+    "easypixel": {
+      "command": "<ruta a Electron/EasyPixel>",
+      "args": ["<ruta>/apps/desktop/out/main/mcp-bridge.js"],
+      "env": { "ELECTRON_RUN_AS_NODE": "1" }
+    }
+  }
+}
+```
+
+Luego pídele, por ejemplo: *«Dibuja en EasyPixel un caballero de 32×32 con paleta Endesga 32 y
+crea una animación idle de 4 frames»*.
+
+- Lo que dibuja Claude aparece **en directo**; cada acción es un paso del historial marcado con ✦
+  y puedes deshacerlo con `Ctrl+Z`.
+- Si Claude crea un sprite, se abre en **una pestaña nueva**: nunca pisa tu trabajo.
+- El indicador **MCP** de la barra de estado muestra si el servidor está activo y qué está
+  haciendo Claude.
+- Puerto configurable con la variable `EASYPIXEL_MCP_PORT`.
+
+Herramientas disponibles:
+
+| Grupo | Herramientas |
+|---|---|
+| Sprites | `get_editor_state`, `create_sprite`, `select_sprite`, `save_sprite` |
+| Paleta | `set_palette`, `replace_color` |
+| Dibujo | `draw_grid` (frame completo como texto), `draw_pixels`, `draw_shape`, `fill`, `clear`, `transform` |
+| Capas | `add_layer`, `update_layer`, `delete_layer` |
+| Frames y animaciones | `add_frame`, `delete_frame`, `set_frame_duration`, `create_animation`, `update_animation`, `delete_animation` |
+| Revisión | `get_frame_image` (PNG ampliado con rejilla), `get_spritesheet_image`, `get_frame_grid`, `undo` |
+
+Además expone el prompt `pixel_art_sprite` (flujo guiado) e instrucciones de servidor con las
+convenciones (coordenadas, formato de rejilla) y consejos de pixel art.
 
 ## Animaciones
 

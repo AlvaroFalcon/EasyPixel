@@ -78,6 +78,6 @@ packages/core: modelo, operaciones, composición, serialización, export Godot (
 1. **Base** — monorepo, modelo de documento en `core`, comandos, undo/redo, tests. ✅
 2. **Editor mínimo** — lienzo, herramientas, paleta, capas, frames, guardar/abrir `.epx.json`. ✅
 3. **Animación** — timeline con tags, onion skin, panel de previsualización, vista de spritesheet. ✅
-4. **MCP** — servidor en Electron main, puente stdio, sincronización en vivo, feedback visual.
+4. **MCP** — servidor en Electron main, puente stdio, sincronización en vivo, feedback visual. ✅
 5. **Godot** — export PNG + `SpriteFrames.tres` a la carpeta del proyecto; import PNG/sheets.
 6. **Extras** — TileSet, GIF, librería de paletas, imagen de referencia.

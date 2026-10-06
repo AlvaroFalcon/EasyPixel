@@ -7,16 +7,19 @@ import { MenuBar } from './components/MenuBar';
 import { PalettePanel } from './components/PalettePanel';
 import { PreviewPanel } from './components/PreviewPanel';
 import { StatusBar } from './components/StatusBar';
+import { TabBar } from './components/TabBar';
 import { Toolbar, ToolOptions } from './components/Toolbar';
 import { fileNameOf, setWindowState } from './lib/platform';
+import { installMcp } from './mcp/connection';
 import { installShortcuts } from './shortcuts';
-import { isDirty, useEditor } from './store/editor';
+import { anyDirty, useEditor } from './store/editor';
 
 export function App() {
-  const dirty = useEditor(isDirty);
+  const dirty = useEditor(anyDirty);
   const title = useEditor((s) => (s.filePath ? fileNameOf(s.filePath) : s.doc.name));
 
   useEffect(installShortcuts, []);
+  useEffect(installMcp, []);
   useEffect(() => setWindowState(title, dirty), [title, dirty]);
 
   return (
@@ -26,7 +29,10 @@ export function App() {
       <div className="workspace">
         <Toolbar />
         <main className="stage">
-          <CanvasView />
+          <TabBar />
+          <div className="canvas-host">
+            <CanvasView />
+          </div>
         </main>
         <aside className="sidebar">
           <PreviewPanel />

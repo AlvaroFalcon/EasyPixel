@@ -13,7 +13,8 @@
     "build": "npm run build -w @easypixel/desktop",
     "test": "vitest run",
     "typecheck": "tsc -p packages/core && npm run typecheck -w @easypixel/desktop",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:electron": "npm run build && playwright test -c playwright.electron.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",

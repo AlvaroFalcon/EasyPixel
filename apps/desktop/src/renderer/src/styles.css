@@ -884,3 +884,136 @@ button.danger {
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* Tabs ----------------------------------------------------------------------- */
+
+.stage {
+  display: flex;
+  flex-direction: column;
+}
+.stage .canvas-host {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.tabbar {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 4px 6px 0;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  flex: none;
+}
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  padding: 4px 6px 4px 10px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tab:hover {
+  background: var(--bg-hover);
+}
+.tab.active {
+  background: var(--stage);
+  border-color: var(--border);
+  color: var(--text);
+}
+.tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tab-close {
+  padding: 0 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  line-height: 1;
+  font-size: 14px;
+}
+.tab-new {
+  align-self: center;
+}
+.claude-mark {
+  color: #d97757;
+}
+
+/* MCP ------------------------------------------------------------------------ */
+
+.mcp-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.mcp-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #6b6f82;
+}
+.mcp-indicator.listening .mcp-dot {
+  background: #5fd38a;
+}
+.mcp-indicator.error .mcp-dot {
+  background: var(--danger);
+}
+.mcp-indicator.busy {
+  color: #d97757;
+}
+.mcp-indicator.busy .mcp-dot {
+  background: #d97757;
+  animation: pulse 0.8s ease-in-out infinite alternate;
+}
+@keyframes pulse {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.code-block {
+  position: relative;
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: text;
+}
+.code-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.code-row header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.code-row h3 {
+  margin: 0;
+  font-size: 13px;
+}
+.status-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

@@ -40,7 +40,31 @@ export interface Notice {
   kind: 'info' | 'error';
 }
 
+/** Per-document state. The active tab's values live at the top level of EditorState. */
+export interface DocTab {
+  id: string;
+  history: History;
+  doc: SpriteDocument;
+  savedDoc: SpriteDocument | null;
+  filePath: string | null;
+  layerId: string;
+  frameIndex: number;
+  activeTagId: string | null;
+  frameRange: { from: number; to: number } | null;
+  selection: Rect | null;
+  zoom: number;
+  pan: Point | null;
+  /** Created by Claude through MCP (shown in the tab). */
+  createdBy: EditSource;
+}
+
 export interface EditorState {
+  /** Id of the active tab. */
+  tabId: string;
+  /** Every open document, in tab order. The active entry is refreshed when switching away. */
+  tabs: DocTab[];
+  createdBy: EditSource;
+
   history: History;
   /** Displayed document: history.present.doc plus any in-progress (uncommitted) edit. */
   doc: SpriteDocument;
@@ -83,11 +107,19 @@ export interface EditorState {
   clipboard: PixelRegion | null;
 
   notice: Notice | null;
+  /** Last MCP tool Claude ran (for the activity indicator). */
+  claudeActivity: { tool: string; at: number } | null;
 }
 
 const initialDoc = createDocument({ name: 'sprite', width: 32, height: 32 });
+let tabCounter = 0;
+const newTabId = () => `sprite_${++tabCounter}`;
+const initialTabId = newTabId();
 
 export const useEditor = create<EditorState>(() => ({
+  tabId: initialTabId,
+  tabs: [],
+  createdBy: 'user',
   history: createHistory(initialDoc),
   doc: initialDoc,
   savedDoc: initialDoc,
@@ -116,6 +148,7 @@ export const useEditor = create<EditorState>(() => ({
   floating: null,
   clipboard: null,
   notice: null,
+  claudeActivity: null,
 }));
 
 const get = useEditor.getState;
@@ -197,6 +230,22 @@ export function commit(
   }
 }
 
+/**
+ * Like commit() but throws instead of showing a notice, and returns the new
+ * document. Used by the MCP executor so errors go back to Claude.
+ */
+export function commitOrThrow(
+  fn: (doc: SpriteDocument) => SpriteDocument,
+  label: string,
+  opts: { source?: EditSource; select?: Partial<Pick<EditorState, 'layerId' | 'frameIndex'>> } = {},
+): SpriteDocument {
+  settleFloating();
+  const s = get();
+  const next = fn(s.history.present.doc);
+  setPresent(pushHistory(s.history, next, label, opts.source), opts.select);
+  return next;
+}
+
 /** Shows an uncommitted document (live stroke / shape preview). */
 export function preview(doc: SpriteDocument): void {
   set({ doc });
@@ -225,9 +274,62 @@ export function redo(): void {
   setPresent(historyRedo(get().history), { selection: null });
 }
 
-/** Replaces the whole session with another document (new / open / import). */
-export function loadDocument(doc: SpriteDocument, filePath: string | null): void {
+// ---------------------------------------------------------------------------
+// Tabs (open documents)
+// ---------------------------------------------------------------------------
+
+const TAB_KEYS = [
+  'history', 'doc', 'savedDoc', 'filePath', 'layerId', 'frameIndex', 'activeTagId',
+  'frameRange', 'selection', 'zoom', 'pan', 'createdBy',
+] as const;
+
+function snapshotActive(): DocTab {
+  const s = get();
+  const tab = { id: s.tabId } as DocTab;
+  for (const k of TAB_KEYS) (tab as unknown as Record<string, unknown>)[k] = s[k];
+  tab.doc = s.history.present.doc;
+  return tab;
+}
+
+/** All tabs with the active one up to date (use for rendering the tab bar). */
+export function allTabs(s: EditorState = get()): DocTab[] {
+  const active = s.tabs.some((t) => t.id === s.tabId) ? s.tabs : [...s.tabs, { id: s.tabId } as DocTab];
+  return active.map((t) =>
+    t.id === s.tabId
+      ? ({ ...t, history: s.history, doc: s.doc, savedDoc: s.savedDoc, filePath: s.filePath, createdBy: s.createdBy } as DocTab)
+      : t,
+  );
+}
+
+export const isTabDirty = (t: Pick<DocTab, 'history' | 'savedDoc'>) => t.history.present.doc !== t.savedDoc;
+export const anyDirty = (s: EditorState) => allTabs(s).some(isTabDirty);
+
+function storeActive(): DocTab[] {
+  const snap = snapshotActive();
+  const s = get();
+  return s.tabs.some((t) => t.id === snap.id) ? s.tabs.map((t) => (t.id === snap.id ? snap : t)) : [...s.tabs, snap];
+}
+
+export function activateTab(id: string): void {
+  const s = get();
+  if (id === s.tabId) return;
+  const target = s.tabs.find((t) => t.id === id);
+  if (!target) throw new Error(`Sprite not found: ${id}`);
+  settleFloating();
+  const tabs = storeActive();
   set({
+    tabs,
+    tabId: id,
+    ...withoutKeys(target, ['id']),
+    doc: target.history.present.doc,
+    floating: null,
+    playing: false,
+  });
+}
+
+function tabFor(doc: SpriteDocument, filePath: string | null, createdBy: EditSource): DocTab {
+  return {
+    id: newTabId(),
     history: createHistory(doc),
     doc,
     savedDoc: filePath ? doc : null,
@@ -236,11 +338,59 @@ export function loadDocument(doc: SpriteDocument, filePath: string | null): void
     frameIndex: 0,
     activeTagId: null,
     frameRange: null,
-    playing: false,
     selection: null,
-    floating: null,
+    zoom: 8,
     pan: null,
+    createdBy,
+  };
+}
+
+/** True for the untouched "sprite" the app starts with, which can be replaced silently. */
+function activeIsPristine(): boolean {
+  const s = get();
+  return !s.filePath && s.history.past.length === 0 && s.history.future.length === 0 && !s.floating;
+}
+
+/**
+ * Opens a document in a new tab (or in place of an untouched blank tab) and
+ * activates it. Returns the tab id.
+ */
+export function openDocument(doc: SpriteDocument, filePath: string | null, createdBy: EditSource = 'user'): string {
+  settleFloating();
+  const tab = tabFor(doc, filePath, createdBy);
+  const replace = activeIsPristine();
+  const current = get().tabId;
+  const tabs = replace ? get().tabs.filter((t) => t.id !== current) : storeActive();
+  set({
+    tabs: [...tabs, tab],
+    tabId: tab.id,
+    ...withoutKeys(tab, ['id']),
+    floating: null,
+    playing: false,
   });
+  return tab.id;
+}
+
+/** Closes a tab (the caller confirms unsaved changes). The last tab is replaced by a blank sprite. */
+export function closeTab(id: string): void {
+  const all = allTabs();
+  const index = all.findIndex((t) => t.id === id);
+  if (index < 0) return;
+  if (all.length === 1) {
+    openDocument(createDocument({ name: 'sprite', width: 32, height: 32 }), null);
+    set({ tabs: get().tabs.filter((t) => t.id !== id) });
+    return;
+  }
+  if (id === get().tabId) {
+    const next = all[index + 1] ?? all[index - 1];
+    activateTab(next.id);
+  }
+  set({ tabs: get().tabs.filter((t) => t.id !== id) });
+}
+
+/** Kept for callers that replace the active document (e.g. tests); opens it like any other document. */
+export function loadDocument(doc: SpriteDocument, filePath: string | null): void {
+  openDocument(doc, filePath);
 }
 
 export function markSaved(filePath: string): void {

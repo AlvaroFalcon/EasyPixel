@@ -2,9 +2,31 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { IPC, type OpenFileOptions, type SaveFileOptions } from '../shared/api';
+import { MCP_DEFAULT_PORT, MCP_IPC } from '../shared/mcp';
+import { startMcpServer, type McpServerHandle } from './mcpServer';
 
 const APP_NAME = 'EasyPixel';
 const dirtyWindows = new WeakSet<BrowserWindow>();
+let mainWindow: BrowserWindow | null = null;
+let mcp: McpServerHandle | null = null;
+
+function startMcp(): void {
+  const port = Number(process.env.EASYPIXEL_MCP_PORT) || MCP_DEFAULT_PORT;
+  mcp = startMcpServer({
+    port,
+    getWindow: () => mainWindow,
+    // Claude Desktop launches this command; the Electron binary doubles as Node.
+    bridge: {
+      command: process.execPath,
+      args: [join(__dirname, 'mcp-bridge.js')],
+      env: { ELECTRON_RUN_AS_NODE: '1', ...(port !== MCP_DEFAULT_PORT ? { EASYPIXEL_MCP_URL: `http://127.0.0.1:${port}/mcp` } : {}) },
+    },
+    onStatus: (status) => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(MCP_IPC.status, status);
+    },
+  });
+  ipcMain.handle(MCP_IPC.info, () => mcp?.status);
+}
 
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
@@ -27,6 +49,10 @@ function createWindow(): BrowserWindow {
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:/.test(url)) void shell.openExternal(url);
     return { action: 'deny' };
+  });
+
+  win.on('closed', () => {
+    if (mainWindow === win) mainWindow = null;
   });
 
   win.on('close', (event) => {
@@ -93,11 +119,14 @@ function registerIpc(): void {
 
 app.whenReady().then(() => {
   registerIpc();
-  createWindow();
+  mainWindow = createWindow();
+  startMcp();
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow();
   });
 });
+
+app.on('will-quit', () => mcp?.close());
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

@@ -28,7 +28,18 @@ export interface SaveFileOptions {
   data: string | Uint8Array;
 }
 
+import type { McpCall, McpStatus, McpToolResult } from './mcpTypes';
+
+export interface EasyPixelMcpApi {
+  getStatus(): Promise<McpStatus>;
+  onStatus(cb: (status: McpStatus) => void): () => void;
+  /** Registers the executor for tool calls coming from MCP clients. */
+  onCall(cb: (call: McpCall) => void): () => void;
+  sendResult(id: number, result: McpToolResult): void;
+}
+
 export interface EasyPixelApi {
+  mcp: EasyPixelMcpApi;
   platform: string;
   openFile(options: OpenFileOptions): Promise<OpenedFile | null>;
   /** Resolves to the path written, or null when the dialog was cancelled. */

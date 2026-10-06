@@ -13,7 +13,9 @@
     "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.web.json"
   },
   "dependencies": {
-    "@easypixel/core": "^0.1.0"
+    "@easypixel/core": "^0.1.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/react": "^19.2.0",

@@ -4,8 +4,17 @@ import { defineConfig } from 'electron-vite';
 
 export default defineConfig({
   main: {
-    // @easypixel/core ships TypeScript sources, so it must be bundled, not required at runtime.
-    build: { externalizeDeps: { exclude: ['@easypixel/core'] } },
+    build: {
+      // @easypixel/core ships TypeScript sources, so it must be bundled, not required at runtime.
+      externalizeDeps: { exclude: ['@easypixel/core'] },
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, 'src/main/index.ts'),
+          // stdio bridge for Claude Desktop (run with ELECTRON_RUN_AS_NODE=1)
+          'mcp-bridge': resolve(__dirname, 'src/bridge/index.ts'),
+        },
+      },
+    },
   },
   preload: {
     build: { externalizeDeps: { exclude: ['@easypixel/core'] } },
