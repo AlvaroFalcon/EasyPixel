@@ -115,7 +115,7 @@ function draw(canvas: HTMLCanvasElement, s: EditorState, checker: CanvasPattern)
       ctx.moveTo(pan.x, gy);
       ctx.lineTo(pan.x + w, gy);
     }
-    ctx.strokeStyle = 'rgba(95, 211, 255, 0.75)';
+    ctx.strokeStyle = 'rgba(95, 211, 255, 0.95)';
     ctx.lineWidth = Math.max(px, 1);
     ctx.stroke();
   }
