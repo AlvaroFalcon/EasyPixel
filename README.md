@@ -224,5 +224,12 @@ See [`docs/PLAN.md`](docs/PLAN.md) for the original plan and phases (in Spanish)
 
 ## License
 
-[MIT](LICENSE) © 2026 Alvaro Falcon. You are free to use, modify and distribute EasyPixel, including
-commercially, as long as the copyright and license notice are kept.
+Copyright © 2026 Alvaro Falcon.
+
+EasyPixel is free software: you can redistribute it and/or modify it under the terms of the
+[GNU General Public License](LICENSE) as published by the Free Software Foundation, either
+version 3 of the License, or (at your option) any later version.
+
+In short: anyone can use, study, modify and share EasyPixel, but if they distribute it (or a
+modified version) they must do so under the same license and with its source code. **The sprites
+and other art you create with EasyPixel are yours** and are not covered by this license.

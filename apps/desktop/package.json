@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "EasyPixel desktop app (Electron + React)",
-  "license": "MIT",
+  "license": "GPL-3.0-or-later",
   "main": "out/main/index.js",
   "scripts": {
     "dev": "npm run build:bridge && electron-vite dev",

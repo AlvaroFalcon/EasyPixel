@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "DOM-free document model, drawing operations and serialization for EasyPixel",
-  "license": "MIT",
+  "license": "GPL-3.0-or-later",
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
