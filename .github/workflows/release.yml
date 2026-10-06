@@ -1,11 +1,18 @@
 name: Release
 
 # Builds installers for Windows (.exe), macOS (.dmg, unsigned) and Linux (.AppImage, .deb).
-# Push a tag like v0.2.0 to publish a GitHub release, or run it manually to get the files as artifacts.
+# Publishes a GitHub release with the installers when a tag like v0.2.0 is pushed, or when run
+# manually with a version (the tag is then created on the commit being built). Without a version,
+# a manual run only uploads the installers as workflow artifacts.
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish, e.g. v0.1.0 (leave empty to only build artifacts)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -38,7 +45,7 @@ jobs:
           if-no-files-found: error
 
   publish:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.event.inputs.version, 'v')
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -48,5 +55,8 @@ jobs:
           merge-multiple: true
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.inputs.version || github.ref_name }}
+          name: EasyPixel ${{ github.event.inputs.version || github.ref_name }}
+          target_commitish: ${{ github.sha }}
           files: dist/**/*
           generate_release_notes: true
