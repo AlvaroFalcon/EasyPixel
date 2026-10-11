@@ -1,7 +1,7 @@
 {
   "name": "easypixel",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Pixel art editor with Claude (MCP) integration and Godot export",
   "license": "GPL-3.0-or-later",
   "workspaces": [
