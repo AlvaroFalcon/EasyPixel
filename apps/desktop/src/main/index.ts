@@ -126,6 +126,9 @@ function registerIpc(): void {
       });
       if (result.canceled || !result.filePath) return null;
       path = result.filePath;
+    } else {
+      // Paths given by Claude (MCP) may point to a folder that does not exist yet.
+      await mkdir(dirname(path), { recursive: true });
     }
     await writeFile(path, options.data);
     return path;

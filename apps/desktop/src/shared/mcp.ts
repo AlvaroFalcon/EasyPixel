@@ -307,6 +307,7 @@ export const TOOLS = {
     description: [
       'Exports the sprite to a Godot 4 project: <name>.png (grid spritesheet), <name>.tres (SpriteFrames with one animation per EasyPixel animation, timings preserved, reverse/pingpong expanded)',
       'and <name>.tscn (AnimatedSprite2D with nearest filtering and autoplay, ready to instance).',
+      'With node="3d" the scene is an AnimatedSprite3D billboard (lit, alpha cut, feet on the origin) for 2D characters in 3D worlds (HD-2D, Octopath-like).',
       '`directory` must be an absolute folder inside a Godot project (project.godot in it or a parent); it is created if missing.',
       'Without `directory`, the folder remembered from the previous export is used.',
     ].join(' '),
@@ -317,6 +318,8 @@ export const TOOLS = {
       spacing: z.number().int().min(0).optional(),
       scale: z.number().int().min(1).max(8).optional().describe('Default 1 (recommended: scale in Godot instead).'),
       autoplay: z.string().optional().describe('Animation the scene plays on start. Default "idle" or the first one.'),
+      node: z.enum(['2d', '3d']).optional().describe('Scene node: "2d" AnimatedSprite2D (default) or "3d" AnimatedSprite3D billboard.'),
+      pixels_per_meter: z.number().int().min(1).max(1024).optional().describe('3D only: sprite pixels per Godot unit. Default 32.'),
     },
   },
   export_godot_tileset: {

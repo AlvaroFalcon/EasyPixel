@@ -81,3 +81,7 @@ packages/core: modelo, operaciones, composición, serialización, export Godot (
 4. **MCP** — servidor en Electron main, puente stdio, sincronización en vivo, feedback visual. ✅
 5. **Godot** — export PNG + `SpriteFrames.tres` + escena `.tscn` a la carpeta del proyecto (validado con Godot 4.5.1); import PNG/sheets. ✅
 6. **Extras** — TileSet, GIF, librería de paletas (+ Lospec), imagen de referencia, instaladores y CI. ✅
+7. **3D y alta definición** — export a vóxeles (`.glb` glTF y `.vox` MagicaVoxel) con 4 modos
+   (extruir, inflar, capas, rebanadas/sprite stacking) y vista previa 3D (three.js); escena
+   `AnimatedSprite3D` billboard para estilo HD-2D; lienzos grandes (presets hasta 256) y
+   herramientas MCP con `region` para revisar sprites grandes por partes. ✅

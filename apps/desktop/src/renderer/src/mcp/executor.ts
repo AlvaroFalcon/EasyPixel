@@ -416,6 +416,8 @@ const handlers: Handlers = {
       spacing: args.spacing ?? doc.godot?.spacing,
       scale: args.scale ?? doc.godot?.scale,
       autoplay: args.autoplay ?? doc.godot?.autoplay,
+      node: args.node ?? doc.godot?.node,
+      pixelsPerMeter: args.pixels_per_meter ?? doc.godot?.pixelsPerMeter,
     };
     const clean = Object.fromEntries(Object.entries(settings).filter(([, v]) => v !== undefined)) as typeof settings;
     const result = await exportToGodot(doc, clean);
@@ -425,7 +427,9 @@ const handlers: Handlers = {
         `Exported to ${result.resDir}:`,
         ...result.written.map((p) => `- ${p}`),
         `Animations: ${result.animations.join(', ')}.`,
-        `Use the .tscn directly, or the .tres as SpriteFrames of an AnimatedSprite2D. For a Sprite2D use the .png with hframes=${result.hframes}, vframes=${result.vframes}.`,
+        clean.node === '3d'
+          ? 'The .tscn is an AnimatedSprite3D billboard standing on the origin: instance it in a 3D scene.'
+          : `Use the .tscn directly, or the .tres as SpriteFrames of an AnimatedSprite2D. For a Sprite2D use the .png with hframes=${result.hframes}, vframes=${result.vframes}.`,
       ].join('\n'),
     );
   },

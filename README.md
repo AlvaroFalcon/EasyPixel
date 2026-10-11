@@ -2,7 +2,8 @@
 
 A desktop pixel art editor for game sprites and spritesheets, built with **React + TypeScript** on
 **Electron**. It ships with an **MCP server so Claude can draw for you**, live, inside the editor,
-and it exports straight to **Godot 4** (`SpriteFrames`, `AnimatedSprite2D` scenes and `TileSet`s).
+and it exports straight to **Godot 4** (`SpriteFrames`, `AnimatedSprite2D` / `AnimatedSprite3D`
+scenes and `TileSet`s) and to **3D voxel models** (`.glb`, MagicaVoxel `.vox`).
 
 ![EasyPixel editor with an animated slime](docs/images/editor.png)
 
@@ -74,8 +75,9 @@ Available tools:
 | Drawing | `draw_grid` (a whole frame as text), `draw_pixels`, `draw_shape`, `fill`, `clear`, `transform` |
 | Layers | `add_layer`, `update_layer`, `delete_layer` |
 | Frames & animations | `add_frame`, `delete_frame`, `set_frame_duration`, `create_animation`, `update_animation`, `delete_animation` |
-| Review | `get_frame_image` (upscaled PNG with a pixel grid), `get_spritesheet_image`, `get_frame_grid`, `undo` |
-| Godot | `export_godot` (PNG + `SpriteFrames.tres` + `.tscn` scene), `export_godot_tileset` |
+| Review | `get_frame_image` (upscaled PNG with a pixel grid), `get_spritesheet_image`, `get_frame_grid` (both accept a `region` to inspect large sprites piece by piece), `undo` |
+| Godot | `export_godot` (PNG + `SpriteFrames.tres` + `.tscn` scene, 2D or 3D billboard), `export_godot_tileset` |
+| 3D | `export_voxel` (`.glb` / `.vox`), `get_voxel_preview` (rendered PNG from any angle) |
 
 The server also exposes a `pixel_art_sprite` prompt (guided workflow) and server instructions with
 the conventions (coordinates, grid format) and pixel art tips. `draw_grid` takes one string per row
@@ -95,6 +97,54 @@ Made entirely through the MCP tools ([`examples/slime`](examples/slime)): a 24×
 
 The folder contains the editable project (`slime.epx.json`), the spritesheet, and the Godot
 `SpriteFrames` resource and scene, validated in Godot 4.5.1.
+
+## 3D voxel export
+
+<p>
+  <img src="docs/images/voxel-slime.gif" alt="The slime as a voxel model" width="280">
+  <img src="docs/images/voxel-pine.gif" alt="A pine made with sprite stacking" width="280">
+</p>
+
+*File → Exportar voxel 3D…* turns a sprite into a 3D model, with a live preview you can orbit:
+
+![Voxel export dialog](docs/images/voxel-dialog.png)
+
+| Mode | Result |
+|---|---|
+| **Extrude** | The current frame with an even thickness. |
+| **Inflate** | Thicker towards the centre: rounded, figurine-like volumes (the slime above). |
+| **Layers** | Every visible layer is a slab at its own depth: 2.5D dioramas. |
+| **Slices** | *Sprite stacking*: every frame is a horizontal slice stacked upwards, so you draw full 3D models in 2D (the pine above, see [`examples/pine`](examples/pine)). |
+
+Formats:
+- **glTF `.glb`**: drop it in Godot (it imports as a `MeshInstance3D`), Blender, Unity or three.js.
+  Faces are merged with greedy meshing and there is one material per palette color, so colors
+  are exact (Godot stores vertex colors in linear 8-bit, which would shift dark colors).
+- **MagicaVoxel `.vox`**: to keep editing in MagicaVoxel or other voxel tools (max 256 voxels per
+  axis).
+
+Claude can do the same through MCP (`export_voxel`) and look at the result with
+`get_voxel_preview`. In CI the `.glb` is imported by a real Godot 4.5.1 (mesh and exact material
+colors are checked) and the `.vox` is parsed back; the `.glb` also passes the Khronos glTF
+validator with no errors or warnings.
+
+## High-definition sprites and HD-2D
+
+Canvases go up to 1024×1024 (presets up to 256), with all tools, onion skin and previews working
+at that size. As a guide: classic 16-bit characters are 16–32 px, detailed characters 48–96 px,
+and big battle sprites or portraits 128–256 px. For large sprites Claude can draw in blocks
+(`draw_grid` with `x`/`y`) and review them piece by piece with `region`.
+
+For **HD-2D** games (pixel art characters in a lit 3D world, like *Octopath Traveler*), choose
+**3D / HD-2D** in the Godot export: the scene becomes an `AnimatedSprite3D` billboard that always
+faces the camera, receives light and shadows, uses nearest filtering and alpha cut, and stands on
+the origin. *Pixels per metre* sets its size in the world. Mix it with voxel exports for the
+scenery:
+
+![HD-2D test scene rendered in Godot 4.5](docs/images/hd2d-godot.png)
+
+*Rendered in Godot 4.5.1: the slime is the exported `AnimatedSprite3D`, the trees are
+`examples/pine/pine.glb`.*
 
 ## Features
 
@@ -132,7 +182,7 @@ in that folder or above it and builds the `res://` paths. It writes:
 |---|---|
 | `<name>.png` | Grid spritesheet (columns, spacing and scale are configurable). It also works for a `Sprite2D` with `hframes`/`vframes`. |
 | `<name>.tres` | `SpriteFrames` with one `AtlasTexture` per frame and **one animation per EasyPixel animation**. Speed and relative durations come from each frame's ms; loop is kept, and ping-pong/reverse are expanded because Godot only plays forward. Without animations, a `default` one is exported. |
-| `<name>.tscn` | A ready-to-instance `AnimatedSprite2D` scene with `texture_filter = Nearest` and `autoplay` (`idle` by default). |
+| `<name>.tscn` | A ready-to-instance `AnimatedSprite2D` scene with `texture_filter = Nearest` and `autoplay` (`idle` by default). With **3D / HD-2D** it is an `AnimatedSprite3D` billboard instead. |
 
 The settings are saved in the `.epx.json`, so after the first export **Ctrl+Shift+E** re-exports
 and Godot reimports the changes automatically.
@@ -205,6 +255,7 @@ tag. Installers for Windows, macOS and Linux are built and published to GitHub R
 ```
 packages/core        Pure TypeScript logic (no DOM): document model, drawing, layers, frames,
                      palettes, compositing, spritesheets, GIF encoder, Godot export,
+                     voxel models (greedy meshing, .vox and .glb writers),
                      .epx.json format, undo history, agent helpers (text grids)
 apps/desktop
   src/main           Electron main process: window, file dialogs, MCP server (HTTP)

@@ -486,6 +486,8 @@ function GodotDialog() {
   const [scale, setScale] = useState(saved?.scale ?? 1);
   const [autoplay, setAutoplay] = useState(saved?.autoplay ?? (doc.tags.find((tag) => tag.name === 'idle') ?? doc.tags[0])?.name ?? '');
   const [mode, setMode] = useState<'sprite' | 'tileset'>(saved?.mode ?? 'sprite');
+  const [node, setNode] = useState<'2d' | '3d'>(saved?.node ?? '2d');
+  const [ppm, setPpm] = useState(saved?.pixelsPerMeter ?? 32);
   const [tileW, setTileW] = useState(saved?.tileWidth ?? useEditor.getState().tileGrid ?? 16);
   const [tileH, setTileH] = useState(saved?.tileHeight ?? useEditor.getState().tileGrid ?? 16);
   const [remember, setRemember] = useState(true);
@@ -526,6 +528,7 @@ function GodotDialog() {
                 spacing,
                 scale,
                 ...(autoplay ? { autoplay } : {}),
+                ...(node === '3d' ? { node, pixelsPerMeter: ppm } : {}),
               };
         if (remember && isElectron && JSON.stringify(settings) !== JSON.stringify(saved)) {
           commit((d) => setGodotSettings(d, settings), t.godot.menuExport);
@@ -589,6 +592,29 @@ function GodotDialog() {
           </select>
         </label>
       </div>
+      <div className="field">
+        {t.godot.node}
+        <div className="field-row">
+          <label className="option">
+            <input type="radio" name="godot-node" checked={node === '2d'} onChange={() => setNode('2d')} />
+            {t.godot.node2d}
+          </label>
+          <label className="option">
+            <input type="radio" name="godot-node" checked={node === '3d'} onChange={() => setNode('3d')} data-testid="godot-node-3d" />
+            {t.godot.node3d}
+          </label>
+          {node === '3d' && (
+            <select value={ppm} onChange={(e) => setPpm(Number(e.target.value))} title={t.godot.pixelsPerMeter}>
+              {[16, 24, 32, 48, 64, 100].map((k) => (
+                <option key={k} value={k}>
+                  {fmt(t.godot.ppmOption, { n: k })}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+        {node === '3d' && <small className="muted">{fmt(t.godot.node3dHint, { m: (doc.height / ppm).toFixed(2) })}</small>}
+      </div>
       {doc.tags.length > 0 ? (
         <label className="field">
           {t.godot.autoplay}
@@ -623,7 +649,7 @@ function GodotDialog() {
             })}
           </li>
           <li>
-            <span className="mono">{base}.tscn</span> — {t.godot.tscnHint}
+            <span className="mono">{base}.tscn</span> — {node === '3d' ? t.godot.tscn3dHint : t.godot.tscnHint}
           </li>
         </ul>
         {doc.tags.some((tag) => tag.direction !== 'forward') && <small className="muted">{t.godot.pingpongHint}</small>}

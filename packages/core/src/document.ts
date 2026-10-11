@@ -46,6 +46,10 @@ export interface GodotExportSettings {
   spacing?: number;
   scale?: number;
   autoplay?: string;
+  /** Scene node: "2d" (AnimatedSprite2D, default) or "3d" (AnimatedSprite3D billboard, for HD-2D). */
+  node?: '2d' | '3d';
+  /** 3D only: sprite pixels per metre. Default 32. */
+  pixelsPerMeter?: number;
   /** "sprite" (default): spritesheet + SpriteFrames + scene. "tileset": canvas as a TileSet atlas. */
   mode?: 'sprite' | 'tileset';
   tileWidth?: number;
