@@ -297,8 +297,19 @@ export function mergeLayerDown(doc: SpriteDocument, layerId: string): SpriteDocu
 
 /** Source-over composition of `src` into `dst` (in place). */
 export function blendInto(dst: CelData, src: CelData, opacity: number): void {
+  const full = opacity >= 1;
   for (let i = 0; i < dst.length; i += 4) {
-    const sa = (src[i + 3] / 255) * opacity;
+    const a = src[i + 3];
+    if (a === 0) continue;
+    // Fast path: opaque pixels on a fully opaque layer just replace (most pixel art).
+    if (full && (a === 255 || dst[i + 3] === 0)) {
+      dst[i] = src[i];
+      dst[i + 1] = src[i + 1];
+      dst[i + 2] = src[i + 2];
+      dst[i + 3] = a;
+      continue;
+    }
+    const sa = (a / 255) * opacity;
     if (sa <= 0) continue;
     const da = dst[i + 3] / 255;
     const oa = sa + da * (1 - sa);

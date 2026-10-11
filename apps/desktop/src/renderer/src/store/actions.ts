@@ -29,6 +29,7 @@ export type DialogState =
   | { kind: 'godot' }
   | { kind: 'palette-save' }
   | { kind: 'lospec' }
+  | { kind: 'voxel' }
   | null;
 
 export const useDialog = create<{ dialog: DialogState }>(() => ({ dialog: null }));

@@ -21,13 +21,16 @@ import {
   type Anchor,
   type PixelRegion,
   type TagDirection,
+  type VoxelMode,
 } from '@easypixel/core';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { regionToCanvas } from '../lib/image';
+import { createVoxelViewer, type VoxelViewer } from '../lib/voxel3d';
+import { buildVoxels, defaultDepth, voxelFileBytes, voxelFileName, type VoxelFormat } from '../lib/voxelExport';
 import { fetchLospecPalette, savePalette } from '../lib/paletteLibrary';
 import { claudeCodeCommand, claudeDesktopConfig, useMcp } from '../mcp/connection';
 import { closeDialog, exportImage, exportPng, newDocument, runGodotExport, useDialog, type ExportOptions } from '../store/actions';
-import { godotProject, isElectron, pickDirectory } from '../lib/platform';
+import { godotProject, isElectron, pickDirectory, saveFile } from '../lib/platform';
 import type { GodotProjectInfo } from '../../../shared/api';
 import { commit, notify, pasteFloating, useEditor } from '../store/editor';
 import { fmt, t } from '../strings';
@@ -87,7 +90,7 @@ function SizeFields({ width, height, onChange }: { width: number; height: number
   );
 }
 
-const SIZE_PRESETS = [8, 16, 24, 32, 48, 64, 128];
+const SIZE_PRESETS = [16, 24, 32, 48, 64, 96, 128, 192, 256];
 
 function NewSpriteDialog() {
   const [name, setName] = useState('sprite');
@@ -761,6 +764,138 @@ function LospecDialog() {
   );
 }
 
+const VOXEL_MODES = ['extrude', 'inflate', 'layers', 'slices'] as const;
+const VOXEL_SIZES = [1 / 32, 1 / 16, 1 / 8, 1 / 4, 1];
+
+function VoxelDialog() {
+  const doc = useEditor((s) => s.history.present.doc);
+  const frameIndex = useEditor((s) => s.frameIndex);
+  const [mode, setMode] = useState<VoxelMode>('inflate');
+  const [depth, setDepth] = useState(() => defaultDepth('inflate', doc));
+  const [format, setFormat] = useState<VoxelFormat>('glb');
+  const [voxelSize, setVoxelSize] = useState(1 / 16);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const viewerRef = useRef<VoxelViewer | null>(null);
+  const [noWebgl, setNoWebgl] = useState(false);
+
+  const result = useMemo(() => {
+    try {
+      return { build: buildVoxels(doc, { mode, depth, frame: frameIndex, voxelSize }), error: '' };
+    } catch (e) {
+      return { build: null, error: (e as Error).message };
+    }
+  }, [doc, mode, depth, frameIndex, voxelSize]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current!;
+    let viewer: VoxelViewer;
+    try {
+      viewer = createVoxelViewer(canvas);
+    } catch {
+      // No WebGL (drivers, blocked GPU…): exporting still works, only the preview is missing.
+      setNoWebgl(true);
+      return;
+    }
+    viewer.resize(canvas.clientWidth, canvas.clientHeight);
+    viewerRef.current = viewer;
+    return () => {
+      viewer.dispose();
+      viewerRef.current = null;
+    };
+  }, []);
+  useEffect(() => {
+    if (result.build && viewerRef.current) viewerRef.current.setMesh(result.build.mesh);
+  }, [result, noWebgl]);
+
+  const m = result.build?.model;
+  const tooBigForVox = format === 'vox' && !!m && (m.sizeX > 256 || m.sizeY > 256 || m.sizeZ > 256);
+  const maxDepth = mode === 'layers' || mode === 'slices' ? 16 : 64;
+
+  return (
+    <Modal
+      title={t.voxel.title}
+      submitLabel={t.dialogs.export}
+      valid={!!result.build && !tooBigForVox}
+      onSubmit={() => {
+        if (!result.build) return;
+        const data = voxelFileBytes(doc, result.build, format);
+        closeDialog();
+        void saveFile({
+          title: t.voxel.title,
+          defaultName: voxelFileName(doc, format),
+          filters: [format === 'vox' ? { name: 'MagicaVoxel', extensions: ['vox'] } : { name: 'glTF', extensions: ['glb'] }],
+          data,
+        }).then((path) => path && notify(fmt(t.voxel.exported, { path })));
+      }}
+    >
+      <div className="voxel-layout">
+        <div className="voxel-preview">
+          <canvas ref={canvasRef} data-testid="voxel-canvas" hidden={noWebgl} />
+          {noWebgl ? <p className="muted voxel-no-webgl">{t.voxel.noWebgl}</p> : <small className="muted">{t.voxel.dragHint}</small>}
+        </div>
+        <div className="import-options">
+          <div className="field">
+            {t.voxel.mode}
+            <div className="chips">
+              {VOXEL_MODES.map((md) => (
+                <button
+                  type="button"
+                  key={md}
+                  className={`chip ${mode === md ? 'active' : ''}`}
+                  data-testid={`voxel-mode-${md}`}
+                  onClick={() => {
+                    setMode(md);
+                    setDepth(defaultDepth(md, doc));
+                  }}
+                >
+                  {t.voxel[md]}
+                </button>
+              ))}
+            </div>
+            <small className="muted">{t.voxel[`${mode}Hint`]}</small>
+            <small className="muted">{mode === 'slices' ? fmt(t.voxel.usesFrames, { n: doc.frames.length }) : fmt(t.voxel.usesFrame, { n: frameIndex + 1 })}</small>
+          </div>
+          <label className="option slider-row">
+            {t.voxel.depth}
+            <input type="range" min={1} max={maxDepth} value={Math.min(depth, maxDepth)} onChange={(e) => setDepth(Number(e.target.value))} data-testid="voxel-depth" />
+            <span className="value">{depth}</span>
+          </label>
+          <div className="field">
+            {t.voxel.format}
+            <label className="radio">
+              <input type="radio" checked={format === 'glb'} onChange={() => setFormat('glb')} />
+              <span>{t.voxel.glb}</span>
+            </label>
+            <label className="radio">
+              <input type="radio" checked={format === 'vox'} onChange={() => setFormat('vox')} data-testid="voxel-format-vox" />
+              <span>{t.voxel.vox}</span>
+            </label>
+          </div>
+          {format === 'glb' && (
+            <label className="field">
+              {t.voxel.voxelSize}
+              <select value={voxelSize} onChange={(e) => setVoxelSize(Number(e.target.value))}>
+                {VOXEL_SIZES.map((v) => (
+                  <option key={v} value={v}>
+                    {v >= 1 ? '1 m' : `${+(v * 100).toFixed(3)} cm`}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {result.error && <p className="error-text">{result.error}</p>}
+          {tooBigForVox && <p className="error-text">{t.voxel.voxLimit}</p>}
+          {m && (
+            <p className="muted mono" data-testid="voxel-info">
+              {fmt(t.voxel.info, { x: m.sizeX, y: m.sizeY, z: m.sizeZ, n: result.build!.filled, tris: result.build!.triangles })}
+            </p>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 function CodeRow({ title, hint, code }: { title: string; hint: string; code: string }) {
   return (
     <section className="code-row">
@@ -834,5 +969,7 @@ export function Dialogs() {
       return <SavePaletteDialog />;
     case 'lospec':
       return <LospecDialog />;
+    case 'voxel':
+      return <VoxelDialog />;
   }
 }

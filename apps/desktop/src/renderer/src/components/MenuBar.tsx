@@ -106,6 +106,7 @@ export function MenuBar() {
     { label: t.menu.importPng, shortcut: `${mod}I`, action: () => void importPng() },
     { label: t.menu.exportPng, shortcut: `${mod}E`, action: () => openDialog({ kind: 'export' }) },
     { label: t.godot.menuExport, action: () => openDialog({ kind: 'godot' }) },
+    { label: t.voxel.menu, action: () => openDialog({ kind: 'voxel' }) },
     { label: t.godot.menuReexport, shortcut: `${mod}⇧E`, action: quickGodotExport, disabled: !hasGodot },
     { label: t.palette.exportFile, action: () => void exportPalette() },
   ];

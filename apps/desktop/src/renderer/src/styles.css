@@ -1075,3 +1075,33 @@ button.danger {
   padding: 6px 10px;
   font-size: 13px;
 }
+.voxel-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.voxel-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+.voxel-preview canvas {
+  width: 300px;
+  height: 300px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: radial-gradient(circle at 50% 40%, #343846, #1b1c22);
+  cursor: grab;
+  touch-action: none;
+}
+.modal:has(.voxel-layout) {
+  width: min(720px, calc(100vw - 32px));
+}
+.voxel-no-webgl {
+  width: 300px;
+  padding: 24px 12px;
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}

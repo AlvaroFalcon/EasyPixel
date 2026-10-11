@@ -260,6 +260,10 @@ export const TOOLS = {
       sprite_id: spriteId,
       frame,
       layer: z.union([z.string(), z.number().int()]).optional().describe('Only this layer. Default: all visible layers.'),
+      region: z
+        .object({ x: z.number().int(), y: z.number().int(), width: z.number().int().min(1), height: z.number().int().min(1) })
+        .optional()
+        .describe('Only this rectangle (e.g. the face of a 128px character) to inspect details at a higher zoom.'),
       scale,
       grid: z.boolean().optional().describe('Overlay a pixel grid. Default true.'),
       background,
@@ -282,7 +286,15 @@ export const TOOLS = {
     title: 'Read frame as grid',
     description:
       'Returns the pixels of a frame (or one layer) as a text grid in the same format draw_grid accepts, with a legend. Useful to edit existing art precisely.',
-    input: { sprite_id: spriteId, frame, layer: z.union([z.string(), z.number().int()]).optional() },
+    input: {
+      sprite_id: spriteId,
+      frame,
+      layer: z.union([z.string(), z.number().int()]).optional(),
+      region: z
+        .object({ x: z.number().int(), y: z.number().int(), width: z.number().int().min(1), height: z.number().int().min(1) })
+        .optional()
+        .describe('Only this rectangle (e.g. the face of a 128px character) to inspect details at a higher zoom.'),
+    },
     readOnly: true,
   },
   undo: {
@@ -320,6 +332,37 @@ export const TOOLS = {
       tile_width: z.number().int().min(1),
       tile_height: z.number().int().min(1),
     },
+  },
+  export_voxel: {
+    title: 'Export 3D voxels',
+    description: [
+      'Turns the sprite into a 3D voxel model and saves it as glTF .glb (Godot 4, Blender, Unity: one material per palette color)',
+      'or MagicaVoxel .vox (max 256 voxels per axis). Modes: "extrude" (even thickness), "inflate" (thicker towards the centre,',
+      'rounded figurine look), "layers" (each visible layer is a slab at its own depth: 2.5D dioramas), "slices" (each frame is a',
+      'horizontal slice stacked upwards, frame 0 at the bottom: sprite stacking, the way to author full 3D voxel models as 2D slices).',
+      'Empty margins are trimmed so the base sits at y = 0. Check the result with get_voxel_preview first.',
+    ].join(' '),
+    input: {
+      sprite_id: spriteId,
+      path: z.string().describe('Absolute output path ending in .glb or .vox (e.g. inside the Godot project).'),
+      mode: z.enum(['extrude', 'inflate', 'layers', 'slices']),
+      depth: z.number().int().min(1).max(256).optional().describe('Thickness in voxels (inflate: maximum thickness). Default depends on the mode.'),
+      frame: frame,
+      voxel_size: z.number().positive().optional().describe('glTF only: meters per voxel. Default 0.0625 (16 voxels = 1 m).'),
+    },
+  },
+  get_voxel_preview: {
+    title: 'View 3D voxels',
+    description: 'Renders the voxel model that export_voxel would produce (same options) from a camera angle and returns a PNG.',
+    input: {
+      sprite_id: spriteId,
+      mode: z.enum(['extrude', 'inflate', 'layers', 'slices']),
+      depth: z.number().int().min(1).max(256).optional(),
+      frame: frame,
+      yaw: z.number().optional().describe('Degrees around the vertical axis. Default -30 (front-left).'),
+      pitch: z.number().min(-85).max(85).optional().describe('Degrees above the horizon. Default 20.'),
+    },
+    readOnly: true,
   },
   save_sprite: {
     title: 'Save sprite',

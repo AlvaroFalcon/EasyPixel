@@ -12,3 +12,4 @@ export * from './animation';
 export * from './agent';
 export * from './godot';
 export * from './gif';
+export * from './voxel';
