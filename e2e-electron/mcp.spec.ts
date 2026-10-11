@@ -189,9 +189,12 @@ test('exports voxels (.glb, .vox) and an HD-2D AnimatedSprite3D for Godot', asyn
       '\tcolors.sort()',
       '\tprint("MESH ", colors, " ", mi.mesh.get_aabb().size)',
       '\tvar hero = (load("res://chars/hero.tscn") as PackedScene).instantiate()',
-      '\troot.add_child(hero)',
-      '\tawait process_frame',
-      '\tprint("SPRITE ", hero.get_class(), " ", hero.billboard, " ", hero.get_aabb())',
+      '\tvar size: Vector2 = hero.sprite_frames.get_frame_texture(hero.animation, 0).get_size() * hero.pixel_size',
+      // The sprite is centred: bottom = offset - half the height, in world units.
+      '\tvar bottom: float = hero.offset.y * hero.pixel_size - size.y / 2',
+      '\tprint("SPRITE ", hero.get_class(), " ", hero.billboard, " ", hero.texture_filter, " ", size, " ", bottom)',
+      '\thero.free()',
+      '\tmodel.free()',
       '\tquit()',
     ].join('\n'),
   );
@@ -199,5 +202,5 @@ test('exports voxels (.glb, .vox) and an HD-2D AnimatedSprite3D for Godot', asyn
   const out = execFileSync(godot!, ['--headless', '--path', project, '--quit-after', '600', '--script', 'check.gd'], { encoding: 'utf8', timeout: 60_000 });
   expect(out).toContain('MESH ["1a1c2c", "ef7d57"] (0.5, 1.875, 0.3125)');
   // 32 px tall at 16 px per metre: 2 m, standing on the origin.
-  expect(out).toContain('SPRITE AnimatedSprite3D 2 [P: (-0.5, 0.0, -0.5), S: (1.0, 2.0, 1.0)]');
+  expect(out).toContain('SPRITE AnimatedSprite3D 2 0 (1.0, 2.0) 0.0');
 });
