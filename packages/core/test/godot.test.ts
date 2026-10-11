@@ -51,6 +51,19 @@ describe('godot export', () => {
     expect(scene).toContain('autoplay = "attack"');
   });
 
+  it('builds an AnimatedSprite3D billboard standing on the origin for HD-2D', () => {
+    const out = exportGodot(knight(), { resDir: 'res://art', scale: 2, node: '3d', pixelsPerMeter: 16 });
+    const scene = out.files.find((f) => f.name.endsWith('.tscn'))!.text;
+    expect(scene).toContain('[node name="KnightHero" type="AnimatedSprite3D"]');
+    expect(scene).toContain('offset = Vector2(0, 24.0)');
+    expect(scene).toContain('pixel_size = 0.03125');
+    expect(scene).toContain('billboard = 2');
+    expect(scene).toContain('texture_filter = 0');
+    expect(scene).toContain('alpha_cut = 1');
+    expect(scene).toContain('sprite_frames = ExtResource("1_frames")');
+    expect(scene).not.toContain('AnimatedSprite2D');
+  });
+
   it('exports all frames as "default" when there are no animations', () => {
     let d = createDocument({ name: 'coin', width: 8, height: 8 });
     d = addFrame(d).doc;

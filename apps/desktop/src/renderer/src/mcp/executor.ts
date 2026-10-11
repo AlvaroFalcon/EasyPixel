@@ -2,6 +2,7 @@ import {
   addFrame,
   addLayer,
   addTag,
+  clampRect,
   clearCel,
   compositeFrame,
   createDocument,
@@ -9,6 +10,7 @@ import {
   duplicateFrame,
   ellipsePoints,
   encodeBase64,
+  extractRegion,
   FILE_EXTENSION,
   flattenOnBackground,
   flipCel,
@@ -45,6 +47,8 @@ import {
 } from '@easypixel/core';
 import type { McpCall, McpToolResult, ToolArgs, ToolName } from '../../../shared/mcp';
 import { exportToGodot } from '../lib/godot';
+import { renderVoxelPng } from '../lib/voxel3d';
+import { buildVoxels, defaultDepth, voxelFileBytes, type VoxelFormat } from '../lib/voxelExport';
 import { encodePng } from '../lib/image';
 import { fileNameOf, saveFile } from '../lib/platform';
 import {
@@ -98,6 +102,14 @@ function parsePalette(input: string[] | string): Color[] {
   const preset = PALETTE_PRESETS.find((p) => p.id === key || p.name.toLowerCase() === input.trim().toLowerCase());
   if (!preset) throw new Error(`Unknown palette preset "${input}". Presets: ${PALETTE_PRESETS.map((p) => p.id).join(', ')}`);
   return preset.colors;
+}
+
+/** Crops a full-canvas image to a rectangle (clamped to the canvas). */
+function cropTo(image: PixelRegion, rect?: { x: number; y: number; width: number; height: number }) {
+  if (!rect) return { region: image, rect: null };
+  const r = clampRect(rect, image.width, image.height);
+  if (!r) throw new Error(`The region is outside the ${image.width}x${image.height} canvas`);
+  return { region: extractRegion(image.data, image.width, r), rect: r };
 }
 
 function autoScale(width: number, height: number, requested?: number): number {
@@ -340,11 +352,9 @@ const handlers: Handlers = {
     const layerId = args.layer !== undefined ? resolveLayer(doc, args.layer, state().layerId) : null;
     const data = compositeFrame(doc, frameIndex, layerId ? { layerIds: [layerId], includeHidden: true } : {});
     const what = layerId ? `layer "${doc.layers.find((l) => l.id === layerId)!.name}"` : 'all visible layers';
-    return imageResult(
-      { width: doc.width, height: doc.height, data },
-      args,
-      `Frame ${frameIndex} of "${doc.name}" (${doc.width}x${doc.height}), ${what}.`,
-    );
+    const { region, rect } = cropTo({ width: doc.width, height: doc.height, data }, args.region);
+    const where = rect ? `, region x=${rect.x} y=${rect.y} ${rect.width}×${rect.height} (grid lines count from the region's top-left)` : '';
+    return imageResult(region, args, `Frame ${frameIndex} of "${doc.name}" (${doc.width}x${doc.height}), ${what}${where}.`);
   },
 
   get_spritesheet_image(args) {
@@ -367,8 +377,23 @@ const handlers: Handlers = {
     const frameIndex = resolveFrame(doc, args.frame, state().frameIndex);
     const layerId = args.layer !== undefined ? resolveLayer(doc, args.layer, state().layerId) : null;
     const data = compositeFrame(doc, frameIndex, layerId ? { layerIds: [layerId], includeHidden: true } : {});
-    const grid = pixelsToGrid({ width: doc.width, height: doc.height, data }, doc.palette);
-    return text(JSON.stringify({ frame: frameIndex, layer: layerId ? args.layer : 'all visible', width: doc.width, height: doc.height, ...grid }, null, 1));
+    const { region, rect } = cropTo({ width: doc.width, height: doc.height, data }, args.region);
+    const grid = pixelsToGrid(region, doc.palette);
+    return text(
+      JSON.stringify(
+        {
+          frame: frameIndex,
+          layer: layerId ? args.layer : 'all visible',
+          x: rect?.x ?? 0,
+          y: rect?.y ?? 0,
+          width: region.width,
+          height: region.height,
+          ...grid,
+        },
+        null,
+        1,
+      ),
+    );
   },
 
   undo(args) {
@@ -391,6 +416,8 @@ const handlers: Handlers = {
       spacing: args.spacing ?? doc.godot?.spacing,
       scale: args.scale ?? doc.godot?.scale,
       autoplay: args.autoplay ?? doc.godot?.autoplay,
+      node: args.node ?? doc.godot?.node,
+      pixelsPerMeter: args.pixels_per_meter ?? doc.godot?.pixelsPerMeter,
     };
     const clean = Object.fromEntries(Object.entries(settings).filter(([, v]) => v !== undefined)) as typeof settings;
     const result = await exportToGodot(doc, clean);
@@ -400,7 +427,9 @@ const handlers: Handlers = {
         `Exported to ${result.resDir}:`,
         ...result.written.map((p) => `- ${p}`),
         `Animations: ${result.animations.join(', ')}.`,
-        `Use the .tscn directly, or the .tres as SpriteFrames of an AnimatedSprite2D. For a Sprite2D use the .png with hframes=${result.hframes}, vframes=${result.vframes}.`,
+        clean.node === '3d'
+          ? 'The .tscn is an AnimatedSprite3D billboard standing on the origin: instance it in a 3D scene.'
+          : `Use the .tscn directly, or the .tres as SpriteFrames of an AnimatedSprite2D. For a Sprite2D use the .png with hframes=${result.hframes}, vframes=${result.vframes}.`,
       ].join('\n'),
     );
   },
@@ -420,6 +449,43 @@ const handlers: Handlers = {
         'In Godot: add a TileMapLayer, set its tile_set to the .tres and paint.',
       ].join('\n'),
     );
+  },
+
+  async export_voxel(args) {
+    const doc = present();
+    const format = args.path.toLowerCase().endsWith('.vox') ? 'vox' : args.path.toLowerCase().endsWith('.glb') ? 'glb' : null;
+    if (!format) throw new Error('The path must end in .glb or .vox');
+    const build = buildVoxels(doc, {
+      mode: args.mode,
+      depth: args.depth ?? defaultDepth(args.mode, doc),
+      frame: resolveFrame(doc, args.frame, state().frameIndex),
+      voxelSize: args.voxel_size ?? 1 / 16,
+    });
+    const written = await saveFile({ path: args.path, data: voxelFileBytes(doc, build, format as VoxelFormat) });
+    if (!written) throw new Error('Saving was cancelled');
+    const m = build.model;
+    return text(
+      `Saved ${format === 'vox' ? 'MagicaVoxel model' : 'glTF model'} to ${written}: ${m.sizeX}×${m.sizeY}×${m.sizeZ} voxels, ${build.filled} filled, ${build.triangles} triangles.` +
+        (format === 'glb' ? ' In Godot it imports as a scene with a MeshInstance3D (one material per color).' : ''),
+    );
+  },
+
+  async get_voxel_preview(args) {
+    const doc = present();
+    const build = buildVoxels(doc, {
+      mode: args.mode,
+      depth: args.depth ?? defaultDepth(args.mode, doc),
+      frame: resolveFrame(doc, args.frame, state().frameIndex),
+      voxelSize: 1 / 16,
+    });
+    const png = await renderVoxelPng(build.mesh, { yaw: args.yaw, pitch: args.pitch });
+    const m = build.model;
+    return {
+      content: [
+        { type: 'image', data: encodeBase64(png), mimeType: 'image/png' },
+        { type: 'text', text: `${args.mode}: ${m.sizeX}×${m.sizeY}×${m.sizeZ} voxels (x right, y up, z towards the camera at yaw 0), ${build.filled} filled.` },
+      ],
+    };
   },
 
   async save_sprite(args) {

@@ -138,6 +138,8 @@ function parseGodot(raw: unknown): GodotExportSettings | undefined {
   if (int(g.spacing, 0) !== undefined) out.spacing = int(g.spacing, 0);
   if (int(g.scale, 1)) out.scale = int(g.scale, 1);
   if (typeof g.autoplay === 'string') out.autoplay = g.autoplay;
+  if (g.node === '2d' || g.node === '3d') out.node = g.node;
+  if (int(g.pixelsPerMeter, 1)) out.pixelsPerMeter = int(g.pixelsPerMeter, 1);
   if (g.mode === 'sprite' || g.mode === 'tileset') out.mode = g.mode;
   if (int(g.tileWidth, 1)) out.tileWidth = int(g.tileWidth, 1);
   if (int(g.tileHeight, 1)) out.tileHeight = int(g.tileHeight, 1);

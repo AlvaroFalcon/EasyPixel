@@ -152,3 +152,55 @@ test('exports a Godot TileSet through MCP', async () => {
   const out = execFileSync(godot!, ['--headless', '--path', project, '--quit-after', '600', '--script', 'check.gd'], { encoding: 'utf8', timeout: 60_000 });
   expect(out).toContain('CHECK (8, 8) 2');
 });
+
+test('exports voxels (.glb, .vox) and an HD-2D AnimatedSprite3D for Godot', async () => {
+  const project = mkdtempSync(join(tmpdir(), 'easypixel-3d-'));
+  writeFileSync(join(project, 'project.godot'), 'config_version=5\n');
+  const client = new Client({ name: 'test', version: '1.0.0' });
+  await client.connect(new StreamableHTTPClientTransport(new URL(URL_)));
+  const call = async (name: string, args: Record<string, unknown> = {}) => (await client.callTool({ name, arguments: args })) as Result;
+  await call('create_sprite', { name: 'hero', width: 16, height: 32, palette: ['#1a1c2c', '#ef7d57'] });
+  await call('draw_shape', { shape: 'rect', from: { x: 4, y: 8 }, to: { x: 11, y: 31 }, color: 1, filled: true });
+  await call('draw_shape', { shape: 'rect', from: { x: 6, y: 2 }, to: { x: 9, y: 7 }, color: 0, filled: true });
+
+  const glb = await call('export_voxel', { path: join(project, 'models', 'hero.glb'), mode: 'inflate', depth: 5 });
+  expect(glb.isError, textOf(glb)).toBeFalsy();
+  expect(textOf(glb)).toContain('8×30×5 voxels');
+  const vox = await call('export_voxel', { path: join(project, 'models', 'hero.vox'), mode: 'extrude', depth: 2 });
+  expect(readFileSync(join(project, 'models', 'hero.vox')).subarray(0, 4).toString('latin1')).toBe('VOX ');
+  expect(vox.isError).toBeFalsy();
+
+  const r = await call('export_godot', { directory: join(project, 'chars'), node: '3d', pixels_per_meter: 16 });
+  expect(textOf(r)).toContain('AnimatedSprite3D');
+  await client.close();
+
+  const godot = process.env.GODOT_BIN;
+  test.skip(!godot, 'Set GODOT_BIN to validate the files with a real Godot 4');
+  writeFileSync(
+    join(project, 'check.gd'),
+    [
+      'extends SceneTree',
+      'func _initialize():',
+      '\tvar model = (load("res://models/hero.glb") as PackedScene).instantiate()',
+      '\tvar mi: MeshInstance3D = model.find_children("*", "MeshInstance3D")[0]',
+      '\tvar colors = []',
+      '\tfor i in mi.mesh.get_surface_count():',
+      '\t\tcolors.append(mi.mesh.surface_get_material(i).albedo_color.to_html(false))',
+      '\tcolors.sort()',
+      '\tprint("MESH ", colors, " ", mi.mesh.get_aabb().size)',
+      '\tvar hero = (load("res://chars/hero.tscn") as PackedScene).instantiate()',
+      '\tvar size: Vector2 = hero.sprite_frames.get_frame_texture(hero.animation, 0).get_size() * hero.pixel_size',
+      // The sprite is centred: bottom = offset - half the height, in world units.
+      '\tvar bottom: float = hero.offset.y * hero.pixel_size - size.y / 2',
+      '\tprint("SPRITE ", hero.get_class(), " ", hero.billboard, " ", hero.texture_filter, " ", size, " ", bottom)',
+      '\thero.free()',
+      '\tmodel.free()',
+      '\tquit()',
+    ].join('\n'),
+  );
+  execFileSync(godot!, ['--headless', '--path', project, '--import'], { stdio: 'ignore', timeout: 60_000 });
+  const out = execFileSync(godot!, ['--headless', '--path', project, '--quit-after', '600', '--script', 'check.gd'], { encoding: 'utf8', timeout: 60_000 });
+  expect(out).toContain('MESH ["1a1c2c", "ef7d57"] (0.5, 1.875, 0.3125)');
+  // 32 px tall at 16 px per metre: 2 m, standing on the origin.
+  expect(out).toContain('SPRITE AnimatedSprite3D 2 0 (1.0, 2.0) 0.0');
+});

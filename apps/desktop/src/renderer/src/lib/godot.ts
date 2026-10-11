@@ -46,6 +46,8 @@ export async function exportToGodot(doc: SpriteDocument, settings: GodotExportSe
     spacing: settings.spacing,
     scale: settings.scale,
     autoplay: settings.autoplay,
+    node: settings.node,
+    pixelsPerMeter: settings.pixelsPerMeter,
   });
   const png = await encodePng(out.sheet);
   const written = await writeFiles(settings.dir, [

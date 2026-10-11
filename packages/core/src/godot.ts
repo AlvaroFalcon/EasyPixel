@@ -1,7 +1,8 @@
 /**
  * Godot 4 export: a grid spritesheet PNG, a SpriteFrames resource (.tres) with
  * one AtlasTexture per frame and one animation per tag, and a ready-to-use
- * AnimatedSprite2D scene (.tscn) with nearest-neighbour filtering.
+ * AnimatedSprite2D scene (.tscn) with nearest-neighbour filtering — or an
+ * AnimatedSprite3D billboard for 2D sprites in 3D worlds ("HD-2D").
  *
  * Text formats follow Godot 4's text resource syntax (format=3).
  */
@@ -25,6 +26,10 @@ export interface GodotExportOptions {
   scale?: number;
   /** Animation played automatically by the generated scene. Default: "idle" if present, else the first. */
   autoplay?: string;
+  /** Scene node: "2d" (AnimatedSprite2D, default) or "3d" (AnimatedSprite3D billboard standing on the origin). */
+  node?: '2d' | '3d';
+  /** 3D only: sprite pixels per Godot unit (metre). Default 32. */
+  pixelsPerMeter?: number;
 }
 
 export interface GodotAnimation {
@@ -146,13 +151,26 @@ export function exportGodot(doc: SpriteDocument, opts: GodotExportOptions): Godo
     animations.find((a) => a.name === 'idle')?.name ??
     animations[0].name;
 
+  const nodeName = godotString(pascalName(doc.name));
+  const node =
+    opts.node === '3d'
+      ? [
+          `[node name=${nodeName} type="AnimatedSprite3D"]`,
+          // Feet on the origin: shift the centred sprite up by half its height (in pixels).
+          `offset = Vector2(0, ${godotFloat((layout.frameHeight * scale) / 2)})`,
+          `pixel_size = ${String(1 / ((opts.pixelsPerMeter ?? 32) * scale))}`,
+          'billboard = 2',
+          'shaded = true',
+          'alpha_cut = 1',
+          'texture_filter = 0',
+        ]
+      : [`[node name=${nodeName} type="AnimatedSprite2D"]`, 'texture_filter = 1'];
   const scene = [
     '[gd_scene load_steps=2 format=3]',
     '',
     `[ext_resource type="SpriteFrames" path=${godotString(joinRes(opts.resDir, tresName))} id="1_frames"]`,
     '',
-    `[node name=${godotString(pascalName(doc.name))} type="AnimatedSprite2D"]`,
-    'texture_filter = 1',
+    ...node,
     'sprite_frames = ExtResource("1_frames")',
     `animation = &${godotString(autoplay)}`,
     `autoplay = ${godotString(autoplay)}`,

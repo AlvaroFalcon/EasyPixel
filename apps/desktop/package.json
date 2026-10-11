@@ -1,8 +1,9 @@
 {
   "name": "@easypixel/desktop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "EasyPixel desktop app (Electron + React)",
+  "license": "GPL-3.0-or-later",
   "main": "out/main/index.js",
   "scripts": {
     "dev": "npm run build:bridge && electron-vite dev",
@@ -20,9 +21,10 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@easypixel/core": "^0.1.0",
+    "@easypixel/core": "^0.2.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@types/three": "^0.180.0",
     "@vitejs/plugin-react": "^5.2.0",
     "electron": "44.5.1",
     "electron-builder": "^26.15.3",
@@ -30,11 +32,12 @@
     "esbuild": "^0.25.12",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "three": "^0.180.0",
     "vite": "^7.1.0",
     "zustand": "^5.0.8"
   },
   "author": {
-    "name": "EasyPixel"
+    "name": "Alvaro Falcon"
   },
   "homepage": "https://github.com/AlvaroFalcon/EasyPixel",
   "productName": "EasyPixel",

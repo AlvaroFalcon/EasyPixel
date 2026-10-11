@@ -14,6 +14,7 @@ import { fileNameOf, setWindowState } from './lib/platform';
 import { installMcp } from './mcp/connection';
 import { installShortcuts } from './shortcuts';
 import { anyDirty, useEditor } from './store/editor';
+import { t, useLanguage } from './strings';
 
 export function App() {
   const dirty = useEditor(anyDirty);
@@ -21,10 +22,12 @@ export function App() {
 
   useEffect(installShortcuts, []);
   useEffect(installMcp, []);
-  useEffect(() => setWindowState(title, dirty), [title, dirty]);
+  const lang = useLanguage((s) => s.lang);
+  useEffect(() => setWindowState(title, dirty, t.quit), [title, dirty, lang]);
 
   return (
-    <div className="app">
+    // Remount on language change so every component re-reads `t`; editor state lives in the stores.
+    <div className="app" key={lang}>
       <MenuBar />
       <ToolOptions />
       <div className="workspace">

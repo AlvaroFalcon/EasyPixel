@@ -9,7 +9,7 @@ const SHORTCUT_BY_TOOL = Object.fromEntries(Object.entries(TOOL_SHORTCUTS).map((
 export function Toolbar() {
   const tool = useEditor((s) => s.tool);
   return (
-    <nav className="toolbar" aria-label="Herramientas">
+    <nav className="toolbar" aria-label={t.toolbar}>
       {TOOL_ORDER.map((id) => (
         <button
           key={id}

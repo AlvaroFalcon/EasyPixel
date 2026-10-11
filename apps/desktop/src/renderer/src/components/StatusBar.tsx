@@ -58,7 +58,7 @@ export function StatusBar() {
       )}
       <span className="status-item mono">{zoom * 100}%</span>
       <span className="status-item">{layer}</span>
-      <span className="status-item muted" title="Última acción">
+      <span className="status-item muted" title={t.lastAction}>
         {lastEdit.source === 'claude' ? '✦ ' : ''}
         {lastEdit.label}
       </span>
