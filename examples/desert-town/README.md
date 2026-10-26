@@ -22,13 +22,13 @@ red cloth and purple shadows. It was drawn entirely through the MCP tools (`crea
 | `palm.epx.json` | 40×52 palm tree with its ground shadow |
 | `lantern.epx.json` | 10×15 hanging lantern, `flicker` animation (2 frames) |
 | `windmill.epx.json` | 24×32 windmill, `spin` animation (4 frames) |
-| `adventurer.epx.json` | 20×38 canvas, ~14×32 slim silver-haired adventurer (hand-pixelled: 8 px face with lashes, two-tone irises and highlights, arms and legs split by outlines, strap across the chest, hammer): `idle` (2 frames) and `walk` (4 frames) |
+| `adventurer.epx.json` | 20×36 canvas, ~12×31 slim silver-haired adventurer (hand-pixelled: 6 px face with 2×1 px eyes, white on the outside and the iris inside, under a lash line, arms and legs split by outlines, strap across the chest, hammer): `idle` (2 frames) and `walk` (4 frames) |
 | `desert_town.epx.json` | 192×128 scene built from the pieces above, one layer per depth: `suelo`, `muros`, `props`, `farolillos`, `personajes` |
 | `*.png`, `*.gif` | Spritesheets and previews |
 
 ## Palette
 
-38 colors in ramps, all of them in every file:
+39 colors in ramps, all of them in every file:
 
 | Ramp | Colors |
 |---|---|
@@ -39,7 +39,7 @@ red cloth and purple shadows. It was drawn entirely through the MCP tools (`crea
 | Metal | `34345c` `52578a` `7c84b6` `b4bce0` |
 | Wood | `45262c` `74402f` `a5633e` `cf8f55` |
 | Green | `1f3a33` `33633e` `5f9445` `a3c35a` |
-| Lamp, skin, accents | `f0a83c` `ffe58f` `d58e6c` `f2c19c` `3d86a8` `8fd3e2` `fff8ec` |
+| Lamp, skin, accents | `f0a83c` `ffe58f` `d58e6c` `f2c19c` `3d86a8` `8fd3e2` `fff8ec` `46a85c` (eyes) |
 
 Outlines use the darkest color of each ramp instead of black, and shadows lean purple rather than
 grey. That is most of what gives the style its warmth.

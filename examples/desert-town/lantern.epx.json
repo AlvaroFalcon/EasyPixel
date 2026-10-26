@@ -42,11 +42,12 @@
     "#f2c19c",
     "#3d86a8",
     "#8fd3e2",
-    "#fff8ec"
+    "#fff8ec",
+    "#46a85c"
   ],
   "layers": [
     {
-      "id": "layer_jygrx0b",
+      "id": "layer_h76qy0b",
       "name": "farolillo",
       "visible": true,
       "locked": false,
@@ -55,17 +56,17 @@
   ],
   "frames": [
     {
-      "id": "frame_6idl40c",
+      "id": "frame_5kxuw0c",
       "duration": 400
     },
     {
-      "id": "frame_qhwtp0d",
+      "id": "frame_wj2h80d",
       "duration": 120
     }
   ],
   "tags": [
     {
-      "id": "anim_f8t5y0e",
+      "id": "anim_mvcot0e",
       "name": "flicker",
       "from": 0,
       "to": 1,
@@ -75,13 +76,13 @@
   ],
   "cels": [
     {
-      "layer": "layer_jygrx0b",
-      "frame": "frame_6idl40c",
+      "layer": "layer_h76qy0b",
+      "frame": "frame_5kxuw0c",
       "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAA7JDf/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOyQ3/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAkFSf/JBUn/zskN/8kFSf/AAAAAAAAAAAAAAAAAAAAAAAAAAAkFSf/UleK/1JXiv9SV4r/UleK/yQVJ/8AAAAAAAAAAAAAAAAkFSf/NDRc/zQ0XP80NFz/NDRc/zQ0XP80NFz/JBUn/wAAAAAAAAAAJBUn/zQ0XP/wqDz/8Kg8//CoPP/wqDz/NDRc/yQVJ/8AAAAAAAAAACQVJ/80NFz/8Kg8///47P//5Y//8Kg8/zQ0XP8kFSf/AAAAAAAAAAAkFSf/NDRc//CoPP//5Y///+WP//CoPP80NFz/JBUn/wAAAAAAAAAAJBUn/zQ0XP/wqDz//+WP///lj//wqDz/NDRc/yQVJ/8AAAAAAAAAACQVJ/80NFz/8Kg8///lj///5Y//8Kg8/zQ0XP8kFSf/AAAAAAAAAAAkFSf/NDRc//CoPP/wqDz/8Kg8//CoPP80NFz/JBUn/wAAAAAAAAAAJBUn/zQ0XP80NFz/NDRc/zQ0XP80NFz/NDRc/yQVJ/8AAAAAAAAAAAAAAAAkFSf/UleK/1JXiv9SV4r/UleK/yQVJ/8AAAAAAAAAAAAAAAAAAAAAAAAAACQVJ/9SV4r/NDRc/yQVJ/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJBUn/yQVJ/8AAAAAAAAAAAAAAAAAAAAA"
     },
     {
-      "layer": "layer_jygrx0b",
-      "frame": "frame_qhwtp0d",
+      "layer": "layer_h76qy0b",
+      "frame": "frame_wj2h80d",
       "data": "AAAAAAAAAAAAAAAAAAAAAAAAAAA7JDf/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOyQ3/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAkFSf/JBUn/zskN/8kFSf/AAAAAAAAAAAAAAAAAAAAAAAAAAAkFSf/UleK/1JXiv9SV4r/UleK/yQVJ/8AAAAAAAAAAAAAAAAkFSf/NDRc/zQ0XP80NFz/NDRc/zQ0XP80NFz/JBUn/wAAAAAAAAAAJBUn/zQ0XP/Pj1X/z49V/8+PVf/Pj1X/NDRc/yQVJ/8AAAAAAAAAACQVJ/80NFz/z49V//CoPP/wqDz/z49V/zQ0XP8kFSf/AAAAAAAAAAAkFSf/NDRc/8+PVf/wqDz/8Kg8/8+PVf80NFz/JBUn/wAAAAAAAAAAJBUn/zQ0XP/Pj1X/8Kg8//CoPP/Pj1X/NDRc/yQVJ/8AAAAAAAAAACQVJ/80NFz/z49V//CoPP/wqDz/z49V/zQ0XP8kFSf/AAAAAAAAAAAkFSf/NDRc/8+PVf/Pj1X/z49V/8+PVf80NFz/JBUn/wAAAAAAAAAAJBUn/zQ0XP80NFz/NDRc/zQ0XP80NFz/NDRc/yQVJ/8AAAAAAAAAAAAAAAAkFSf/UleK/1JXiv9SV4r/UleK/yQVJ/8AAAAAAAAAAAAAAAAAAAAAAAAAACQVJ/9SV4r/NDRc/yQVJ/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJBUn/yQVJ/8AAAAAAAAAAAAAAAAAAAAA"
     }
   ]
