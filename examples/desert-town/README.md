@@ -10,6 +10,7 @@ red cloth and purple shadows. It was drawn entirely through the MCP tools (`crea
 ![Desert town scene (4×)](desert_town-x4.png)
 
 <p>
+  <img src="adventurer-idle.gif" alt="Adventurer idle" height="288">
   <img src="adventurer.gif" alt="Adventurer walk cycle" height="288">
   <img src="windmill.gif" alt="Spinning windmill" height="192">
   <img src="lantern.gif" alt="Flickering lantern" height="120">
@@ -22,7 +23,7 @@ red cloth and purple shadows. It was drawn entirely through the MCP tools (`crea
 | `palm.epx.json` | 40×52 palm tree with its ground shadow |
 | `lantern.epx.json` | 10×15 hanging lantern, `flicker` animation (2 frames) |
 | `windmill.epx.json` | 24×32 windmill, `spin` animation (4 frames) |
-| `adventurer.epx.json` | 20×36 canvas, ~14×32 slim adventurer with spiky silver hair falling to the shoulders (hand-pixelled: 6 px face with 2×1 px eyes, white on the outside and the iris inside, under a lash line, arms and legs split by outlines, strap across the chest, hammer): `idle` (2 frames) and `walk` (4 frames) |
+| `adventurer.epx.json` | 20×36 canvas, ~14×32 slim adventurer with spiky silver hair falling to the shoulders (hand-pixelled: 6 px face with 2×1 px eyes, white on the outside and the iris inside, under a lash line, arms and legs split by outlines, lavender shoulder puffs, a strap over a purple undershirt, pink accents, hammer): `idle` (2 frames) and `walk` (4 frames), with the hair tips swinging and the hammer lagging a frame behind |
 | `desert_town.epx.json` | 192×128 scene built from the pieces above, one layer per depth: `suelo`, `muros`, `props`, `farolillos`, `personajes` |
 | `*.png`, `*.gif` | Spritesheets and previews |
 
