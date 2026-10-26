@@ -25,6 +25,7 @@ red cloth and purple shadows. It was drawn entirely through the MCP tools (`crea
 | `windmill.epx.json` | 24×32 windmill, `spin` animation (4 frames) |
 | `adventurer.epx.json` | 20×40 canvas, ~14×32 slim adventurer with spiky silver hair (hand-pixelled: 6 px face with 2×1 px eyes under a lash line, a scarf with a loose end, a warm-steel hammer resting against the left shoulder). 24 frames, 8 animations for the four directions: `idle_down`/`walk_down`, `idle_up`/`walk_up`, `idle_right`/`walk_right` and `idle_left`/`walk_left` (the right view mirrored). The hair tips, the scarf end and the free right arm swing while walking |
 | `chibi.epx.json` | 24×32 chibi take on the same adventurer: big head with full bangs, 2×3 eyes with a highlight, a flower clip, big red scarf, hammer on her back. 40 frames: `idle_*` (4 frames, with a blink) and `walk_*` (6 frames) for `down`, `left`, `right` and `up` (left mirrors right) |
+| `painterly.epx.json` | 24×48 painterly take: realistic proportions, 3/4 view walking down-right, clustered shading lit from the upper right and no uniform black outline. Its own palette adds 18 colours (browns, reds and a silver lavender) after the shared 39. `idle_right`/`walk_right` (2 and 6 frames) and the mirrored `idle_left`/`walk_left` |
 | `desert_town.epx.json` | 192×128 scene built from the pieces above, one layer per depth: `suelo`, `muros`, `props`, `farolillos`, `personajes` |
 | `*.png`, `*.gif` | Spritesheets and previews |
 
@@ -35,6 +36,13 @@ red cloth and purple shadows. It was drawn entirely through the MCP tools (`crea
 <p>
   <img src="chibi-walk.gif" alt="Chibi walking in the four directions" height="192">
   <img src="chibi-idle.gif" alt="Chibi idle in the four directions" height="192">
+</p>
+
+## Painterly version
+
+<p>
+  <img src="painterly-walk.gif" alt="Painterly walker, both diagonals" height="288">
+  <img src="painterly-idle.gif" alt="Painterly idle, both diagonals" height="288">
 </p>
 
 ## Palette
