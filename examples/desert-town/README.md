@@ -22,7 +22,7 @@ red cloth and purple shadows. It was drawn entirely through the MCP tools (`crea
 | `palm.epx.json` | 40×52 palm tree with its ground shadow |
 | `lantern.epx.json` | 10×15 hanging lantern, `flicker` animation (2 frames) |
 | `windmill.epx.json` | 24×32 windmill, `spin` animation (4 frames) |
-| `adventurer.epx.json` | 28×48 silver-haired adventurer with a long coat, red scarf and a hammer on her back: `idle` (2 frames) and `walk` (4 frames) |
+| `adventurer.epx.json` | 20×36 canvas, ~12×31 slim silver-haired adventurer (hand-pixelled: 6 px face, arms and legs split by outlines, strap across the chest, hammer): `idle` (2 frames) and `walk` (4 frames) |
 | `desert_town.epx.json` | 192×128 scene built from the pieces above, one layer per depth: `suelo`, `muros`, `props`, `farolillos`, `personajes` |
 | `*.png`, `*.gif` | Spritesheets and previews |
 
