@@ -10,8 +10,8 @@ red cloth and purple shadows. It was drawn entirely through the MCP tools (`crea
 ![Desert town scene (4×)](desert_town-x4.png)
 
 <p>
-  <img src="adventurer-idle.gif" alt="Adventurer idle" height="288">
-  <img src="adventurer.gif" alt="Adventurer walk cycle" height="288">
+  <img src="adventurer.gif" alt="Adventurer walking in the four directions" height="240">
+  <img src="adventurer-idle.gif" alt="Adventurer idle in the four directions" height="240">
   <img src="windmill.gif" alt="Spinning windmill" height="192">
   <img src="lantern.gif" alt="Flickering lantern" height="120">
 </p>
@@ -23,7 +23,7 @@ red cloth and purple shadows. It was drawn entirely through the MCP tools (`crea
 | `palm.epx.json` | 40×52 palm tree with its ground shadow |
 | `lantern.epx.json` | 10×15 hanging lantern, `flicker` animation (2 frames) |
 | `windmill.epx.json` | 24×32 windmill, `spin` animation (4 frames) |
-| `adventurer.epx.json` | 20×40 canvas, ~14×32 slim adventurer with spiky silver hair falling to the shoulders (hand-pixelled: 6 px face with 2×1 px eyes, white on the outside and the iris inside, under a lash line, arms and legs split by outlines, lavender shoulder puffs, a strap over a purple undershirt, pink accents, a warm-steel hammer (light top face, dark groove, ridged neck, orange binding) resting against the left shoulder, gripped at hip height, with a hair lock and the sleeve still showing beside the handle): `idle` (2 frames) and `walk` (4 frames), with the hair tips swinging |
+| `adventurer.epx.json` | 20×40 canvas, ~14×32 slim adventurer with spiky silver hair (hand-pixelled: 6 px face with 2×1 px eyes under a lash line, a scarf with a loose end, a warm-steel hammer resting against the left shoulder). 24 frames, 8 animations for the four directions: `idle_down`/`walk_down`, `idle_up`/`walk_up`, `idle_right`/`walk_right` and `idle_left`/`walk_left` (the right view mirrored). The hair tips, the scarf end and the free right arm swing while walking |
 | `desert_town.epx.json` | 192×128 scene built from the pieces above, one layer per depth: `suelo`, `muros`, `props`, `farolillos`, `personajes` |
 | `*.png`, `*.gif` | Spritesheets and previews |
 
