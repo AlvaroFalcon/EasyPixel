@@ -10,7 +10,7 @@ red cloth and purple shadows. It was drawn entirely through the MCP tools (`crea
 ![Desert town scene (4×)](desert_town-x4.png)
 
 <p>
-  <img src="wanderer.gif" alt="Wanderer walk cycle" height="256">
+  <img src="adventurer.gif" alt="Adventurer walk cycle" height="288">
   <img src="windmill.gif" alt="Spinning windmill" height="192">
   <img src="lantern.gif" alt="Flickering lantern" height="120">
 </p>
@@ -22,7 +22,7 @@ red cloth and purple shadows. It was drawn entirely through the MCP tools (`crea
 | `palm.epx.json` | 40×52 palm tree with its ground shadow |
 | `lantern.epx.json` | 10×15 hanging lantern, `flicker` animation (2 frames) |
 | `windmill.epx.json` | 24×32 windmill, `spin` animation (4 frames) |
-| `wanderer.epx.json` | 16×32 hooded character: `idle` (2 frames) and `walk` (4 frames) |
+| `adventurer.epx.json` | 28×48 silver-haired adventurer with a long coat, red scarf and a hammer on her back: `idle` (2 frames) and `walk` (4 frames) |
 | `desert_town.epx.json` | 192×128 scene built from the pieces above, one layer per depth: `suelo`, `muros`, `props`, `farolillos`, `personajes` |
 | `*.png`, `*.gif` | Spritesheets and previews |
 
